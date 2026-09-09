@@ -14,6 +14,10 @@ from backend.evaluation.prompts import (
     UsefulContextPrompt,
 )
 
+from backend.evaluation.storage import (
+    append_evaluation_record
+)
+
 __all__ = [
     "CONTEXT_PRECISION_PROMPT_VERSION",
     "UsefulContextPrompt",

@@ -1,11 +1,13 @@
 from pathlib import Path
+from typing import Literal
+import logging
 
 import faiss
 from langsmith import trace, traceable
 from langsmith.run_helpers import get_current_run_tree
 from sentence_transformers import CrossEncoder, SentenceTransformer
 
-from backend.config import INDEX_DIR
+from backend.config import INDEX_DIR, CHAT_MODEL
 from backend.embedding import load_model_for_query
 from backend.evaluation import (
     CONTEXT_PRECISION_PROMPT_VERSION,
@@ -16,6 +18,7 @@ from backend.evaluation import (
     evaluate_context_precision,
     evaluate_faithfulness,
     faithfulness_scorer,
+    append_evaluation_record
 )
 from backend.generation import (
     build_answer_chain,
@@ -37,7 +40,10 @@ from backend.schemas import (
     IndexManifest,
     QueryPlan,
     RetrievalContext,
+    EvaluationRecord
 )
+
+logger = logging.getLogger(__name__)
 
 OUT_OF_SCOPE_ANSWER = (
     "I can help with questions about the supplied HR "
@@ -132,6 +138,42 @@ def print_sources(sources: list[ContextSource]) -> None:
             f" — Chunk {source.chunk.chunk_number}"
         )
 
+def save_evaluation_records(
+        question_run,
+        question, plan,
+        draft,
+        context,
+        scores: EvaluationScores=None,
+        status: Literal["completed", "skipped", "failed"] = "completed",
+        reason: str | None = None
+    ) -> None:
+    record = EvaluationRecord(
+        trace_id=question_run.id if question_run is not None else None,
+        question=question,
+        query_plan=plan,
+        draft=draft,
+        context=context,
+        scores=scores,
+        status=status,
+        reason=reason,
+        evaluator_model=CHAT_MODEL,
+        context_precision_prompt_version="useful_context_v1"
+    )
+
+    log_path = (
+        Path(__file__).resolve().parent
+        / "logs"
+        / "evaluations.jsonl"
+    )
+
+    append_evaluation_record(
+        record=record,
+        log_path=log_path
+    )
+
+    print("Evaluation record saved:", record.record_id)
+    print("Log file:", log_path)
+
 @traceable(name="hrpolicy_bot_question")
 def run_question(question: str) -> AnswerDraft:
     question_run = get_current_run_tree()
@@ -154,6 +196,22 @@ def run_question(question: str) -> AnswerDraft:
         print("\nAnswer:")
         print(draft.answer)
         print("\nSources:\nNo sources cited.")
+
+        context = RetrievalContext(
+            context_text="",
+            sources=[],
+        )
+
+        save_evaluation_records(
+            question_run=question_run,
+            question=question,
+            plan=plan,
+            draft=draft,
+            context=context,
+            scores=None,
+            status="skipped",
+            reason="Question is outside the HR-policy scope.",
+        )
         return draft
 
     (
@@ -187,16 +245,38 @@ def run_question(question: str) -> AnswerDraft:
     print("\nAnswer:")
     print(draft.answer)
 
-    scores = score_answer(
+    scores: EvaluationScores | None = None
+    evaluation_status: Literal["completed", "failed"] = "completed"
+    failure_reason: str | None = None
+
+    try:
+        scores = score_answer(
+            question=question,
+            draft=draft,
+            context=context,
+            manifest=manifest,
+        )
+    except Exception as exc:
+        evaluation_status = "failed"
+        failure_reason = (
+            f"Evaluation failed with {type(exc).__name__}."
+        )
+        logger.exception("Evaluation failed for the generated answer")
+
+    save_evaluation_records(
+        question_run=question_run,
         question=question,
+        plan=plan,
         draft=draft,
         context=context,
-        manifest=manifest,
+        scores=scores,
+        status=evaluation_status,
+        reason=failure_reason,
     )
 
     print_sources(resolved_sources)
 
-    if question_run is not None:
+    if scores is not None and question_run is not None:
         print(f"question run found {question_run.id}")
         log_evaluation_feedback(
             run_id=question_run.id,
