@@ -1,47 +1,36 @@
-from pathlib import Path
-from typing import Literal
 import logging
 
 import faiss
-from langsmith import trace, traceable
+from pathlib import Path
+from uuid import uuid4
+from fastapi import BackgroundTasks
+from langsmith import traceable
 from langsmith.run_helpers import get_current_run_tree
 from sentence_transformers import CrossEncoder, SentenceTransformer
 
-from backend.config import INDEX_DIR, CHAT_MODEL
-from backend.embedding import load_model_for_query
-from backend.evaluation import (
-    CONTEXT_PRECISION_PROMPT_VERSION,
-    answer_relevancy_scorer,
-    build_evaluation_input,
-    context_precision_scorer,
-    evaluate_answer_relevancy,
-    evaluate_context_precision,
-    evaluate_faithfulness,
-    faithfulness_scorer,
-    append_evaluation_record
-)
 from backend.generation import (
     build_answer_chain,
     build_context,
     build_query_planner,
     resolve_answer_sources,
 )
-from backend.observability import log_evaluation_feedback, print_tracing_status
+from backend.observability import print_tracing_status
 from backend.retrieval import (
-    load_reranker,
-    load_retrieval_assets,
     retrieve_for_plan,
 )
 from backend.schemas import (
     AnswerDraft,
     ChunkRecord,
-    ContextSource,
-    EvaluationScores,
     IndexManifest,
     QueryPlan,
     RetrievalContext,
-    EvaluationRecord
+    QuestionResponse,
+    EvaluationJob,
+    EvaluationState
 )
+from backend.helper import save_evaluation_records
+from backend.evaluation.worker import run_evaluation_job
+from backend.evaluation import create_evaluation_state
 
 logger = logging.getLogger(__name__)
 
@@ -50,133 +39,32 @@ OUT_OF_SCOPE_ANSWER = (
     "handbook. Please ask an HR-policy question."
 )
 
-
-def load_query_resources(
-    assets_dir: Path = INDEX_DIR
-) -> tuple[
-    faiss.Index,
-    list[ChunkRecord],
-    IndexManifest,
-    SentenceTransformer,
-    CrossEncoder,
-]:
-    with trace("load_retrieval_resources", run_type="chain"):
-        index, chunks, manifest = load_retrieval_assets(assets_dir)
-
-        embedding_model = load_model_for_query(manifest)
-        reranker = load_reranker()
-
-    return index, chunks, manifest, embedding_model, reranker
-
-def score_answer(
+@traceable(
+    name="hrpolicy_bot_question",
+    process_inputs=lambda inputs: {
+        "question": inputs["question"],
+    }
+)
+def run_question(
     question: str,
-    draft: AnswerDraft,
-    context: RetrievalContext,
-    manifest: IndexManifest
-) -> EvaluationScores:
-    with trace(
-        "ragas_evaluation",
-        run_type="chain",
-        metadata={
-            "context_precision_variant": "without_reference",
-            "context_precision_prompt_version": (
-                CONTEXT_PRECISION_PROMPT_VERSION
-            )
-        }
-    ) as evaluation_run:
-        sample = build_evaluation_input(
-            question=question,
-            draft=draft,
-            context=context,
-        )
-
-        faithfulness_score = evaluate_faithfulness(
-            sample=sample,
-            scorer=faithfulness_scorer(),
-        )
-
-        print("\nFaithfulness:", round(faithfulness_score, 4))
-
-        relevancy_score = evaluate_answer_relevancy(
-            sample=sample,
-            scorer=answer_relevancy_scorer(manifest),
-        )
-
-        print("\nAnswer relevancy:", round(relevancy_score, 4))
-
-        precision_score = evaluate_context_precision(
-            sample=sample,
-            scorer=context_precision_scorer(),
-        )
-
-        print("\nContext precision:", round(precision_score, 4))
-
-        scores = EvaluationScores(
-            faithfulness=faithfulness_score,
-            answer_relevancy=relevancy_score,
-            context_precision=precision_score
-        )
-
-        evaluation_run.end(
-            outputs=scores.model_dump(mode="json")
-        )
-
-    return scores
-
-def print_sources(sources: list[ContextSource]) -> None:
-    print("\nSources:")
-
-    if not sources:
-        print("No sources cited.")
-
-    for source in sources:
-        metadata = source.chunk.metadata
-
-        print(
-            f"\n[{source.source_id}] "
-            f"{metadata.source} — PDF page {metadata.page_number}"
-            f" — Chunk {source.chunk.chunk_number}"
-        )
-
-def save_evaluation_records(
-        question_run,
-        question, plan,
-        draft,
-        context,
-        scores: EvaluationScores=None,
-        status: Literal["completed", "skipped", "failed"] = "completed",
-        reason: str | None = None
-    ) -> None:
-    record = EvaluationRecord(
-        trace_id=question_run.id if question_run is not None else None,
-        question=question,
-        query_plan=plan,
-        draft=draft,
-        context=context,
-        scores=scores,
-        status=status,
-        reason=reason,
-        evaluator_model=CHAT_MODEL,
-        context_precision_prompt_version="useful_context_v1"
-    )
-
-    log_path = (
-        Path(__file__).resolve().parent
-        / "logs"
-        / "evaluations.jsonl"
-    )
-
-    append_evaluation_record(
-        record=record,
-        log_path=log_path
-    )
-
-    print("Evaluation record saved:", record.record_id)
-    print("Log file:", log_path)
-
-@traceable(name="hrpolicy_bot_question")
-def run_question(question: str) -> AnswerDraft:
+    *,
+    index: faiss.Index,
+    chunks: list[ChunkRecord],
+    manifest: IndexManifest,
+    embedding_model: SentenceTransformer,
+    reranker: CrossEncoder,
+    background_tasks: BackgroundTasks,
+    db_path: Path
+) -> QuestionResponse:
     question_run = get_current_run_tree()
+    evaluation_id = uuid4()
+
+    trace_id = question_run.id if question_run is not None else None
+    project_name = (
+        question_run.session_name
+        if question_run is not None
+        else None
+    )
     print_tracing_status()
 
     planner = build_query_planner()
@@ -202,25 +90,41 @@ def run_question(question: str) -> AnswerDraft:
             sources=[],
         )
 
-        save_evaluation_records(
-            question_run=question_run,
-            question=question,
-            plan=plan,
-            draft=draft,
-            context=context,
-            scores=None,
-            status="skipped",
-            reason="Question is outside the HR-policy scope.",
-        )
-        return draft
+        reason = "Question is outside the HR-policy scope."
 
-    (
-        index,
-        chunks,
-        manifest,
-        embedding_model,
-        reranker,
-    ) = load_query_resources()
+        create_evaluation_state(
+            state=EvaluationState(
+                evaluation_id=evaluation_id,
+                status="skipped",
+                reason=reason,
+            ),
+            db_path=db_path,
+        )
+
+        try:
+            save_evaluation_records(
+                trace_id=question_run.id if question_run is not None else None,
+                question=question,
+                plan=plan,
+                draft=draft,
+                context=context,
+                scores=None,
+                status="skipped",
+                reason="Question is outside the HR-policy scope.",
+            )
+        except Exception:
+            logger.exception(
+                "Could not log skipped evaluation %s",
+                evaluation_id,
+            )
+
+        return QuestionResponse(
+            answer=draft.answer,
+            sources=[],
+            evaluation_status="skipped",
+            scores=None,
+            trace_id=question_run.id if question_run is not None else None,
+        )
 
     matches = retrieve_for_plan(
         plan=plan,
@@ -242,46 +146,35 @@ def run_question(question: str) -> AnswerDraft:
 
     resolved_sources = resolve_answer_sources(draft, context)
 
-    print("\nAnswer:")
-    print(draft.answer)
-
-    scores: EvaluationScores | None = None
-    evaluation_status: Literal["completed", "failed"] = "completed"
-    failure_reason: str | None = None
-
-    try:
-        scores = score_answer(
-            question=question,
-            draft=draft,
-            context=context,
-            manifest=manifest,
-        )
-    except Exception as exc:
-        evaluation_status = "failed"
-        failure_reason = (
-            f"Evaluation failed with {type(exc).__name__}."
-        )
-        logger.exception("Evaluation failed for the generated answer")
-
-    save_evaluation_records(
-        question_run=question_run,
+    job = EvaluationJob(
+        evaluation_id=evaluation_id,
         question=question,
-        plan=plan,
+        query_plan=plan,
         draft=draft,
         context=context,
-        scores=scores,
-        status=evaluation_status,
-        reason=failure_reason,
+        manifest=manifest,
+        trace_id=trace_id,
+        project_name=project_name,
     )
 
-    print_sources(resolved_sources)
+    response = QuestionResponse(
+        answer=draft.answer,
+        sources=resolved_sources,
+        evaluation_id=evaluation_id,
+        evaluation_status="pending",
+        scores=None,
+        trace_id=trace_id,
+    )
 
-    if scores is not None and question_run is not None:
-        print(f"question run found {question_run.id}")
-        log_evaluation_feedback(
-            run_id=question_run.id,
-            project_name=question_run.session_name,
-            scores=scores
-        )
+    create_evaluation_state(
+        state=EvaluationState(evaluation_id=evaluation_id),
+        db_path=db_path,
+    )
 
-    return draft
+    background_tasks.add_task(
+        run_evaluation_job,
+        job=job,
+        db_path=db_path,
+    )
+
+    return response

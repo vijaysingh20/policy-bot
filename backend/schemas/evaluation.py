@@ -4,6 +4,7 @@ from uuid import UUID, uuid4
 from typing import Literal
 from pydantic import model_validator
 from backend.schemas.answers import QueryPlan, AnswerDraft, RetrievalContext
+from backend.schemas.indexing import IndexManifest
 
 
 class EvaluationInput(BaseModel):
@@ -49,3 +50,13 @@ class EvaluationRecord(BaseModel):
                 )
         
         return self
+
+class EvaluationJob(BaseModel):
+    evaluation_id: UUID
+    question: str = Field(min_length=1)
+    query_plan: QueryPlan
+    draft: AnswerDraft
+    context: RetrievalContext
+    manifest: IndexManifest
+    trace_id: UUID | None = None
+    project_name: str | None = None

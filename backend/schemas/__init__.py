@@ -11,9 +11,10 @@ from backend.schemas.answers import (
     RetrievalContext,
 )
 from backend.schemas.documents import ChunkRecord, PageMetaData, PageRecord
-from backend.schemas.evaluation import EvaluationInput, EvaluationScores, EvaluationRecord
+from backend.schemas.evaluation import EvaluationInput, EvaluationScores, EvaluationRecord, EvaluationJob
 from backend.schemas.indexing import EmbeddedChunk, IndexManifest, Vector
 from backend.schemas.search import RerankedResult, SearchRequest, SearchResult
+from backend.schemas.api import HealthResponse, QuestionRequest, QuestionResponse, EvaluationState
 
 __all__ = [
     "AnswerDraft",
@@ -22,6 +23,7 @@ __all__ = [
     "EmbeddedChunk",
     "EvaluationInput",
     "EvaluationScores",
+    "EvaluationRecord",
     "IndexManifest",
     "PageMetaData",
     "PageRecord",
@@ -31,4 +33,9 @@ __all__ = [
     "SearchRequest",
     "SearchResult",
     "Vector",
+    "HealthResponse",
+    "QuestionRequest",
+    "QuestionResponse",
+    "EvaluationState",
+    "EvaluationJob"
 ]

@@ -4,6 +4,7 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent
 
 DATA_DIR = PROJECT_ROOT / "data"
 STORAGE_DIR = PROJECT_ROOT / "storage"
+DATABASE_DIR = PROJECT_ROOT / "db"
 
 HANDBOOK_PDF = DATA_DIR / "handbook.pdf"
 INDEX_NAME = "handbook-v1"

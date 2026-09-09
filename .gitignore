@@ -13,3 +13,6 @@ storage/
 
 # Source handbook (not redistributed)
 data/
+
+# Local evaluation state database
+db/
