@@ -1,0 +1,149 @@
+:root {
+  color-scheme: dark;
+  --background: #0b1120;
+  --surface: #131d30;
+  --input: #0f172a;
+  --text: #e5edf8;
+  --muted: #a6b5cc;
+  --border: #35445e;
+  --accent: #93c5fd;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--background);
+  color: var(--text);
+  font-family: Arial, sans-serif;
+  line-height: 1.6;
+}
+
+.policy-page {
+  max-width: 850px;
+  margin: 0 auto;
+  padding: 40px 20px;
+}
+
+.policy-page h1,
+.policy-page h2,
+.policy-page h3 {
+  color: #f8fafc;
+  line-height: 1.25;
+}
+
+.policy-page > p {
+  color: var(--muted);
+}
+
+.policy-page label {
+  display: block;
+  margin-bottom: 8px;
+  font-weight: 600;
+}
+
+.policy-page textarea {
+  width: 100%;
+  padding: 14px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--input);
+  color: var(--text);
+  font: inherit;
+  resize: vertical;
+}
+
+.policy-page textarea::placeholder {
+  color: var(--muted);
+}
+
+.policy-page button {
+  padding: 10px 22px;
+  border: none;
+  border-radius: 8px;
+  background: var(--accent);
+  color: #10213b;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.policy-page button:hover:not(:disabled) {
+  background: #bfdbfe;
+}
+
+.policy-page button:disabled {
+  background: #334155;
+  color: #cbd5e1;
+  cursor: not-allowed;
+}
+
+.policy-page :focus-visible {
+  outline: 3px solid var(--accent);
+  outline-offset: 3px;
+}
+
+.panel {
+  margin-top: 28px;
+  padding: 24px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface);
+  overflow-wrap: anywhere;
+}
+
+.policy-page details {
+  margin: 12px 0;
+  padding: 14px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--input);
+}
+
+.policy-page summary {
+  color: #bfdbfe;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.policy-page details[open] summary {
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--border);
+}
+
+.policy-page dl {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px 20px;
+}
+
+.policy-page dt {
+  color: var(--muted);
+}
+
+.policy-page dd {
+  margin: 0;
+  color: #6ee7b7;
+  font-weight: bold;
+  font-variant-numeric: tabular-nums;
+}
+
+.policy-page a {
+  color: #bfdbfe;
+}
+
+.policy-page [role="alert"] {
+  color: #fda4af;
+}
+
+@media (max-width: 600px) {
+  .policy-page {
+    padding: 24px 16px;
+  }
+
+  .panel {
+    padding: 18px;
+  }
+}

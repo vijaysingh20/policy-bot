@@ -1,6 +1,7 @@
 from uuid import UUID
 
 from fastapi import FastAPI, Request, HTTPException, BackgroundTasks
+from fastapi.middleware.cors import CORSMiddleware
 from backend.schemas import HealthResponse
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
@@ -45,6 +46,16 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
 app = FastAPI(
     title="HR Policy Bot",
     lifespan=lifespan
+)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        "http://localhost:3000",
+        "http://127.0.0.1:3000",
+    ],
+    allow_methods=["GET", "POST"],
+    allow_headers=["Content-Type"]
 )
 
 @app.get("/health", response_model=HealthResponse)
