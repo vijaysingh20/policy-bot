@@ -10,6 +10,9 @@ HANDBOOK_PDF = DATA_DIR / "handbook.pdf"
 INDEX_NAME = "handbook-v1"
 INDEX_DIR = STORAGE_DIR / INDEX_NAME
 
+UPLOAD_DIR = PROJECT_ROOT / "uploads"
+MAX_UPLOAD_BYTES = 10 * 1024 * 1024
+
 EMBEDDING_MODEL = "sentence-transformers/all-MiniLM-L6-v2"
 RERANKER_MODEL = "cross-encoder/ms-marco-MiniLM-L6-v2"
 DEVICE = "cpu"

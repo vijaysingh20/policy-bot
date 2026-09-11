@@ -1,17 +1,20 @@
-from uuid import UUID
+from uuid import UUID, uuid4
+from pypdf import PdfReader
+from pypdf.errors import PdfReadError
 
-from fastapi import FastAPI, Request, HTTPException, BackgroundTasks
+from fastapi import FastAPI, Request, HTTPException, BackgroundTasks, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from backend.schemas import HealthResponse
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 
-from backend.config import INDEX_DIR, DATABASE_DIR
+from backend.config import INDEX_DIR, DATABASE_DIR, UPLOAD_DIR, MAX_UPLOAD_BYTES
 from backend.embedding import load_model_for_query
 from backend.retrieval import load_reranker, load_retrieval_assets
-from backend.schemas import QuestionResponse, QuestionRequest, EvaluationState
+from backend.schemas import QuestionResponse, QuestionRequest, EvaluationState, UploadInfo, DocumentUploadResponse
 from backend.app.query import run_question
 from backend.evaluation import initialize_evaluation_store, get_evaluation_state
+from backend.ingestion import save_uploaded_pdf
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
@@ -103,3 +106,97 @@ def read_evaluation(
             detail="Evaluation not found"
         )
     return result
+
+@app.post(
+    "/documents",
+    response_model=DocumentUploadResponse,
+    status_code=201
+)
+def upload_document(file: UploadFile) -> DocumentUploadResponse:
+    try:
+        file.file.seek(0,2)
+        size_bytes = file.file.tell()
+        file.file.seek(0)
+
+        if size_bytes == 0:
+            raise HTTPException(
+                status_code=400,
+                detail="The uploaded file is empty."
+            )
+
+        if size_bytes > MAX_UPLOAD_BYTES:
+            raise HTTPException(
+                status_code=413,
+                detail="The maximum supported file size is 10 MiB."
+            )
+
+        reader = PdfReader(file.file)
+
+        if reader.is_encrypted:
+            raise HTTPException(
+                status_code=400,
+                detail="Encrypted PDF's are not supported yet."
+            )
+
+        page_count = len(reader.pages)
+
+        if page_count == 0:
+            raise HTTPException(
+                status_code=400,
+                detail="The PDF contains no pages."
+            )
+
+        document_id = uuid4()
+
+        save_pdf = save_uploaded_pdf(
+            source=file.file,
+            document_id=document_id,
+            upload_dir=UPLOAD_DIR
+        )
+
+        return DocumentUploadResponse(
+            filename=file.filename,
+            content_type=file.content_type,
+            page_count=page_count,
+            size_bytes=size_bytes,
+            document_id=document_id
+        )
+    except Exception as exc:
+        raise HTTPException(
+            status_code=400,
+            detail="The uploaded file could not be read as a PDF."
+        ) from exc
+    finally:
+        file.file.seek(0)
+
+@app.post("/upload/inspect", response_model=UploadInfo)
+def inspect_upload(file: UploadFile) -> UploadInfo:
+    try:
+        file.file.seek(0)
+        reader = PdfReader(file.file)
+
+        if reader.is_encrypted:
+            raise HTTPException(
+                status_code=400,
+                detail="Encrypted PDFs are not supported yet."
+            )
+
+        page_count = len(reader.pages)
+        if page_count == 0:
+            raise HTTPException(
+                status_code=400,
+                detail="The PDF contains no pages."
+            )
+        
+        return UploadInfo(
+            filename= file.filename,
+            content_type= file.content_type,
+            page_count=page_count
+        )
+    except PdfReadError as exc:
+        raise HTTPException(
+            status_code=400,
+            detail="The uploaded file could not be read as a PDF."
+        ) from exc
+    finally:
+        file.file.seek(0)
