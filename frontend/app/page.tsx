@@ -33,6 +33,13 @@ type EvaluationState = {
   reason: string | null;
 }
 
+type DocumentInfo = {
+  document_id: string;
+  filename: string | null;
+  page_count: number;
+  status: "uploaded" | "ready";
+}
+
 export default function HomePage() {
   const [question, setQuestion] = useState("");
   const [answer, setAnswer] = useState("");
@@ -41,6 +48,12 @@ export default function HomePage() {
   const [sources, setSources] = useState<ContextSource[]>([]);
   const [evaluation, setEvaluation] = useState<EvaluationState | null>(null);
   const [pollingError, setPollingError] = useState("");
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [activeDocument, setActiveDocument] = useState<DocumentInfo | null>(null);
+  const [documentPhase, setDocumentPhase] = useState<"idle" | "uploading" | "indexing">("idle");
+  const [uploadError, setUploadError] = useState("");
+
+  const isPreparing = documentPhase !== "idle";
 
   const evaluationId = evaluation?.evaluation_id;
   const evaluationStatus = evaluation?.status;
@@ -90,7 +103,7 @@ export default function HomePage() {
         );
 
         if (latest.status === "pending") {
-          timer = window.setTimeout(poll, 2000);
+          timer = window.setTimeout(poll, 5000);
         }
       } catch (caughtError) {
         if (cancelled) return;
@@ -101,6 +114,7 @@ export default function HomePage() {
         );
       }
     }
+
     timer = window.setTimeout(poll, 2000);
     return () => {
       cancelled=true;
@@ -110,18 +124,100 @@ export default function HomePage() {
     }
   }, [evaluationId, evaluationStatus])
 
+  function clearAnswer() {
+    setAnswer("");
+    setSources([]);
+    setEvaluation(null);
+    setPollingError("");
+    setError("");
+  }
+
+  async function handlePrepareDocument() {
+    if (!selectedFile || isPreparing || isLoading) return;
+
+    if (selectedFile.size > 10 * 1024 * 1024) {
+      setUploadError("Choose a PDF no larger than 10 MiB.");
+      return;
+    }
+
+    clearAnswer();
+    setActiveDocument(null);
+    setUploadError("");
+    setDocumentPhase("uploading");
+
+    try {
+      const formData = new FormData();
+
+      formData.append("file", selectedFile)
+
+      const uploadResponse = await fetch(
+        "http://127.0.0.1:8000/documents",
+        {
+          method: "POST",
+          body: formData
+        }
+      )
+
+      if(!uploadResponse.ok) {
+        throw new Error(`Upload failed (${uploadResponse.status}).`);
+      }
+
+      const uploaded: DocumentInfo = await uploadResponse.json();
+      
+      if (
+        typeof uploaded?.document_id !== "string" ||
+        uploaded.status !== "uploaded"
+      ) {
+        throw new Error("Unexpected upload response.")
+      }
+
+      setDocumentPhase("indexing");
+
+      const ingestResponse = await fetch(
+        `http://127.0.0.1:8000/documents/${uploaded.document_id}/ingest`,
+        {
+          method: "POST"
+        }
+      )
+
+      if (!ingestResponse.ok) {
+        throw new Error(
+          `Document preparation failed (${ingestResponse.status}).`
+        )
+      }
+
+      const ready: DocumentInfo = await ingestResponse.json();
+
+      if (
+        ready?.document_id !== uploaded.document_id ||
+        ready.status !== "ready"
+      ) {
+        throw new Error("The document is not ready for questions.");
+      }
+      setActiveDocument(ready);
+    } catch (caughtError) {
+      setUploadError(
+        caughtError instanceof Error
+        ? caughtError.message
+        : "Could not prepare the document."
+      )
+    } finally {
+      setDocumentPhase("idle")
+    }
+  }
+
   async function handleAsk() {
     const submittedQuestion = question.trim();
     
-    if (!submittedQuestion || isLoading) return;
+    if (
+      !submittedQuestion || 
+      isLoading ||
+      isPreparing ||
+      activeDocument?.status !== "ready"
+    ) return;
 
-
-    setAnswer("");
-    setSources([]);
+    clearAnswer()
     setIsLoading(true);
-    setError("");
-    setEvaluation(null);
-    setPollingError("");
 
     try {
       const response = await fetch("http://127.0.0.1:8000/questions", {
@@ -131,6 +227,7 @@ export default function HomePage() {
         },
         body: JSON.stringify({
           question: submittedQuestion,
+          document_id: activeDocument.document_id,
         }),
       });
 
@@ -172,6 +269,49 @@ export default function HomePage() {
       <h1>HR Policy Bot</h1>
       <p>Ask a question about the employee handbook.</p>
 
+      <section className="panel">
+        <h2>Your document</h2>
+
+        <label htmlFor="pdf-upload">Choose an HR-policy PDF</label>
+
+        <input
+          id="pdf-upload"
+          type="file"
+          accept=".pdf,application/pdf"
+          disabled={isPreparing || isLoading}
+          onChange={(event) => {
+            setSelectedFile(event.target.files?.[0] ?? null);
+            setActiveDocument(null);
+            setUploadError("");
+            clearAnswer();
+          }}
+        />
+
+        <button
+          type="button"
+          onClick={handlePrepareDocument}
+          disabled={!selectedFile || isPreparing || isLoading}
+        >
+          {documentPhase === "uploading"
+          ? "Uploading..."
+          : documentPhase === "indexing"
+            ? "Preparing document..."
+            : "Upload and prepare"}
+        </button>
+
+        {uploadError && <p role="alert">{uploadError}</p>}
+
+        {
+          activeDocument && (
+            <p role="status">
+              Ready: {activeDocument.filename ?? "PDF document"}
+              {" - "}
+              {activeDocument.page_count} pages
+            </p>
+          )
+        }
+      </section>
+
       <div>
         <label htmlFor="question">Your Question</label>
       </div>
@@ -191,7 +331,12 @@ export default function HomePage() {
       <button
         type="button"
         onClick={handleAsk}
-        disabled={question.trim() === "" || isLoading}
+        disabled={
+          question.trim() === "" || 
+          isLoading ||
+          isPreparing ||
+          activeDocument?.status !== "ready"
+        }
       >
         {isLoading ? "Finding an answer..." : "Ask"}
       </button>

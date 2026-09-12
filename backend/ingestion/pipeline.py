@@ -60,7 +60,9 @@ def verify_chunk_sizes(
 def build_index(
     pdf_path: Path = HANDBOOK_PDF,
     output_dir: Path = INDEX_DIR,
-    model_name: str = EMBEDDING_MODEL
+    model_name: str = EMBEDDING_MODEL,
+    *,
+    source_name: str | None = None
 ) -> tuple[
     faiss.Index,
     list[EmbeddedChunk],
@@ -71,12 +73,17 @@ def build_index(
     model, model_revision = load_model_for_ingestion(model_name)
     splitter = build_token_splitter(model)
 
-    pages = load_pdf_pages(pdf_path)
+    pages = load_pdf_pages(pdf_path, source_name=source_name)
 
     document_chunks = build_document_chunks(
         pages=pages,
         splitter=splitter,
     )
+
+    if not document_chunks:
+        raise ValueError(
+            "No text chunks could be extracted from this PDF."
+        )
 
     verify_chunk_sizes(document_chunks, model)
 

@@ -10,4 +10,4 @@ class UploadInfo(BaseModel):
 class DocumentUploadResponse(UploadInfo):
     document_id: UUID
     size_bytes: int = Field(gt=0)
-    status: Literal["uploaded"] = "uploaded"
+    status: Literal["ready", "uploaded"] = "uploaded"

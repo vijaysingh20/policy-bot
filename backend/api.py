@@ -14,7 +14,7 @@ from backend.retrieval import load_reranker, load_retrieval_assets
 from backend.schemas import QuestionResponse, QuestionRequest, EvaluationState, UploadInfo, DocumentUploadResponse
 from backend.app.query import run_question
 from backend.evaluation import initialize_evaluation_store, get_evaluation_state
-from backend.ingestion import save_uploaded_pdf
+from backend.ingestion import save_uploaded_pdf, initialize_document_store, create_document_record, get_document_record, update_document_record, build_index
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
@@ -27,11 +27,13 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
 
     app.state.embedding_model = load_model_for_query(manifest)
     app.state.reranker = load_reranker()
+    app.state.document_resources = {}
 
     print("Loaded vectors:", app.state.index.ntotal)
 
     db_path = DATABASE_DIR / "evaluations.sqlite3"
     initialize_evaluation_store(db_path)
+    initialize_document_store(db_path)
 
     app.state.evaluation_db_path = db_path
 
@@ -45,6 +47,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         del app.state.embedding_model
         del app.state.reranker
         del app.state.evaluation_db_path
+        del app.state.document_resources
 
 app = FastAPI(
     title="HR Policy Bot",
@@ -75,6 +78,62 @@ def ask_question(
     background_tasks: BackgroundTasks
 ) -> QuestionResponse:
     state = request.app.state
+
+    index = state.index
+    chunks = state.chunks
+    manifest = state.manifest
+    embedding_model = state.embedding_model
+
+    if body.document_id is not None:
+        document = get_document_record(
+            document_id=body.document_id,
+            db_path=state.evaluation_db_path
+        )
+
+        if document is None:
+            raise HTTPException(
+                status_code=404,
+                detail="Document not found."
+            )
+
+        if document.status != "ready":
+            raise HTTPException(
+                status_code=409,
+                detail="The document must be indexed before asking questions.",
+            )
+
+        if body.document_id not in state.document_resources:
+            assets_dir = INDEX_DIR.parent / str(body.document_id)
+
+            try:
+                loaded_index, loaded_chunks, loaded_manifest = (
+                    load_retrieval_assets(assets_dir)
+                )
+            except (OSError, ValueError, RuntimeError) as exc:
+                raise HTTPException(
+                    status_code=409,
+                    detail="The document's retrieval assets are unavailable.",
+                ) from exc
+
+            same_embedding_config = (
+                loaded_manifest.embedding_model == state.embedding_model
+                and loaded_manifest.embedding_revision == state.manifest.embedding_revision
+                and loaded_manifest.dimensions == state.manifest.dimensions
+            )
+
+            loaded_model = (
+                state.embedding_model if same_embedding_config else load_model_for_query(loaded_manifest)
+            )
+
+            state.document_resources[body.document_id] = (
+                loaded_index,
+                loaded_chunks,
+                loaded_manifest,
+                loaded_model,
+            )
+        index, chunks, manifest, embedding_model = (
+            state.document_resources[body.document_id]
+        )
 
     return run_question(
         question=body.question,
@@ -112,7 +171,10 @@ def read_evaluation(
     response_model=DocumentUploadResponse,
     status_code=201
 )
-def upload_document(file: UploadFile) -> DocumentUploadResponse:
+def upload_document(
+    file: UploadFile,
+    request: Request
+) -> DocumentUploadResponse:
     try:
         file.file.seek(0,2)
         size_bytes = file.file.tell()
@@ -148,26 +210,97 @@ def upload_document(file: UploadFile) -> DocumentUploadResponse:
 
         document_id = uuid4()
 
-        save_pdf = save_uploaded_pdf(
+        document = DocumentUploadResponse(
+            document_id=document_id,
+            filename=file.filename,
+            content_type=file.content_type,
+            page_count=page_count,
+            size_bytes=size_bytes
+        )
+
+        saved_path = save_uploaded_pdf(
             source=file.file,
             document_id=document_id,
             upload_dir=UPLOAD_DIR
         )
 
-        return DocumentUploadResponse(
-            filename=file.filename,
-            content_type=file.content_type,
-            page_count=page_count,
-            size_bytes=size_bytes,
-            document_id=document_id
-        )
-    except Exception as exc:
+        try:
+            create_document_record(
+                document=document,
+                db_path=request.app.state.evaluation_db_path
+            )
+        except Exception as exc:
+            saved_path.unlink(missing_ok=True)
+            raise
+        return document
+    except PdfReadError as exc:
         raise HTTPException(
             status_code=400,
             detail="The uploaded file could not be read as a PDF."
         ) from exc
     finally:
         file.file.seek(0)
+
+
+@app.post(
+    "/documents/{document_id}/ingest",
+    response_model=DocumentUploadResponse
+)
+def ingest_document(
+    document_id: UUID,
+    request: Request
+)-> DocumentUploadResponse:
+    db_path = request.app.state.evaluation_db_path
+
+    document = get_document_record(
+        document_id=document_id,
+        db_path=db_path
+    )
+
+    if document is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Document not found."
+        )
+
+    pdf_path = UPLOAD_DIR / f"{document_id}.pdf"
+    assets_dir = INDEX_DIR.parent / str(document_id)
+
+    if not pdf_path.is_file():
+        raise HTTPException(
+            status_code=409,
+            detail="The document record exists, but it's pdf is missing."
+        )
+
+    if not assets_dir.exists():
+        build_index(
+            pdf_path=pdf_path,
+            output_dir=assets_dir,
+            source_name=document.filename or "document.pdf"
+        )
+
+    try:
+        load_retrieval_assets(assets_dir)
+    except (OSError, ValueError, RuntimeError) as exc:
+        raise HTTPException(
+            status_code=409,
+            detail=(
+                "The document's retrieval assets could not be loaded. "
+                "Ingestion needs repair before this document can be used."
+            ),
+        ) from exc
+
+    ready_document = DocumentUploadResponse.model_validate({
+        **document.model_dump(),
+        "status": "ready"
+    })
+
+    update_document_record(
+        document=ready_document,
+        db_path=db_path
+    )
+
+    return ready_document
 
 @app.post("/upload/inspect", response_model=UploadInfo)
 def inspect_upload(file: UploadFile) -> UploadInfo:

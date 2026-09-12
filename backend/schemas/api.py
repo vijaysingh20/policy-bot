@@ -15,6 +15,7 @@ class QuestionRequest(BaseModel):
         min_length=1,
         max_length=2000
     )
+    document_id: UUID | None = None
 
 class QuestionResponse(BaseModel):
     answer: str = Field(min_length=1)
