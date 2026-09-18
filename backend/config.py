@@ -10,6 +10,8 @@ HANDBOOK_PDF = DATA_DIR / "handbook.pdf"
 INDEX_NAME = "handbook-v1"
 INDEX_DIR = STORAGE_DIR / INDEX_NAME
 
+EVALUATION_LOG = PROJECT_ROOT / "logs" / "evaluations.jsonl"
+
 UPLOAD_DIR = PROJECT_ROOT / "uploads"
 MAX_UPLOAD_BYTES = 10 * 1024 * 1024
 

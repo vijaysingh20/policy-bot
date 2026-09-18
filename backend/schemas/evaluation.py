@@ -6,6 +6,8 @@ from pydantic import model_validator
 from backend.schemas.answers import QueryPlan, AnswerDraft, RetrievalContext
 from backend.schemas.indexing import IndexManifest
 
+EvaluationStatus = Literal["completed", "skipped", "failed"]
+
 
 class EvaluationInput(BaseModel):
     user_input: str = Field(min_length=1)
@@ -29,7 +31,7 @@ class EvaluationRecord(BaseModel):
     draft: AnswerDraft
     context: RetrievalContext
     scores: EvaluationScores | None = None
-    status: Literal["completed", "skipped", "failed"] = "completed"
+    status: EvaluationStatus = "completed"
     reason: str | None = None
     evaluator_model: str = Field(min_length=1)
     context_precision_prompt_version: str = Field(min_length=1)

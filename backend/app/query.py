@@ -28,7 +28,7 @@ from backend.schemas import (
     EvaluationJob,
     EvaluationState
 )
-from backend.helper import save_evaluation_records
+from backend.evaluation.storage import save_evaluation_records
 from backend.evaluation.worker import run_evaluation_job
 from backend.evaluation import create_evaluation_state
 

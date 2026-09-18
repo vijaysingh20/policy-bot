@@ -10,7 +10,7 @@ from contextlib import asynccontextmanager
 
 from backend.config import INDEX_DIR, DATABASE_DIR, UPLOAD_DIR, MAX_UPLOAD_BYTES
 from backend.embedding import load_model_for_query
-from backend.retrieval import load_reranker, load_retrieval_assets
+from backend.retrieval import DocumentResources, load_reranker, load_retrieval_assets
 from backend.schemas import QuestionResponse, QuestionRequest, EvaluationState, UploadInfo, DocumentUploadResponse
 from backend.app.query import run_question
 from backend.evaluation import initialize_evaluation_store, get_evaluation_state
@@ -21,15 +21,16 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     print("Loading retrieval resources...")
     index, chunks, manifest = load_retrieval_assets(INDEX_DIR)
 
-    app.state.index = index
-    app.state.chunks = chunks
-    app.state.manifest = manifest
-
-    app.state.embedding_model = load_model_for_query(manifest)
+    app.state.default_resources = DocumentResources(
+        index=index,
+        chunks=chunks,
+        manifest=manifest,
+        embedding_model=load_model_for_query(manifest)
+    )
     app.state.reranker = load_reranker()
     app.state.document_resources = {}
 
-    print("Loaded vectors:", app.state.index.ntotal)
+    print("Loaded vectors:", app.state.default_resources.index.ntotal)
 
     db_path = DATABASE_DIR / "evaluations.sqlite3"
     initialize_evaluation_store(db_path)
@@ -41,10 +42,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         yield
     finally:
         print("Releasing retrieval resources...")
-        del app.state.index
-        del app.state.chunks
-        del app.state.manifest
-        del app.state.embedding_model
+        del app.state.default_resources
         del app.state.reranker
         del app.state.evaluation_db_path
         del app.state.document_resources
@@ -71,6 +69,62 @@ def health_check() -> HealthResponse:
         service="hr-policy-bot-backend",
     )
 
+def resolve_document_resources(
+    document_id: UUID | None,
+    state
+) -> DocumentResources:
+    if document_id is None:
+        return state.default_resources
+
+    document = get_document_record(
+        document_id=document_id,
+        db_path=state.evaluation_db_path
+    )
+
+    if document is None:
+        raise HTTPException(status_code=404, detail="Document not found.")
+    if document.status != "ready":
+        raise HTTPException(
+            status_code=409,
+            detail="The document must be indexed before asking questions.",
+        )
+
+    cached = state.document_resources.get(document_id)
+    if cached is not None:
+        return cached
+
+    assets_dir = INDEX_DIR.parent / str(document_id)
+    try:
+        index, chunks, manifest = load_retrieval_assets(assets_dir)
+    except (OSError, ValueError, RuntimeError) as exc:
+        raise HTTPException(
+            status_code=409,
+            detail="The document's retrieval assets are unavailable.",
+        ) from exc
+
+    default = state.default_resources
+    same_embedding_config = (
+        manifest.embedding_model == default.manifest.embedding_model
+        and manifest.embedding_revision == default.manifest.embedding_revision
+        and manifest.dimensions == default.manifest.dimensions
+    )
+    embedding_model = (
+        default.embedding_model
+        if same_embedding_config
+        else load_model_for_query(manifest)
+    )
+
+    resources = DocumentResources(
+        index=index,
+        chunks=chunks,
+        manifest=manifest,
+        embedding_model=embedding_model
+    )
+
+    state.document_resources[document_id] = resources
+    return resources
+
+
 @app.post("/questions", response_model=QuestionResponse)
 def ask_question(
     body: QuestionRequest,
@@ -79,68 +133,14 @@ def ask_question(
 ) -> QuestionResponse:
     state = request.app.state
 
-    index = state.index
-    chunks = state.chunks
-    manifest = state.manifest
-    embedding_model = state.embedding_model
-
-    if body.document_id is not None:
-        document = get_document_record(
-            document_id=body.document_id,
-            db_path=state.evaluation_db_path
-        )
-
-        if document is None:
-            raise HTTPException(
-                status_code=404,
-                detail="Document not found."
-            )
-
-        if document.status != "ready":
-            raise HTTPException(
-                status_code=409,
-                detail="The document must be indexed before asking questions.",
-            )
-
-        if body.document_id not in state.document_resources:
-            assets_dir = INDEX_DIR.parent / str(body.document_id)
-
-            try:
-                loaded_index, loaded_chunks, loaded_manifest = (
-                    load_retrieval_assets(assets_dir)
-                )
-            except (OSError, ValueError, RuntimeError) as exc:
-                raise HTTPException(
-                    status_code=409,
-                    detail="The document's retrieval assets are unavailable.",
-                ) from exc
-
-            same_embedding_config = (
-                loaded_manifest.embedding_model == state.embedding_model
-                and loaded_manifest.embedding_revision == state.manifest.embedding_revision
-                and loaded_manifest.dimensions == state.manifest.dimensions
-            )
-
-            loaded_model = (
-                state.embedding_model if same_embedding_config else load_model_for_query(loaded_manifest)
-            )
-
-            state.document_resources[body.document_id] = (
-                loaded_index,
-                loaded_chunks,
-                loaded_manifest,
-                loaded_model,
-            )
-        index, chunks, manifest, embedding_model = (
-            state.document_resources[body.document_id]
-        )
+    resources = resolve_document_resources(body.document_id, state)
 
     return run_question(
         question=body.question,
-        index=state.index,
-        chunks=state.chunks,
-        manifest=state.manifest,
-        embedding_model=state.embedding_model,
+        index=resources.index,
+        chunks=resources.chunks,
+        manifest=resources.manifest,
+        embedding_model=resources.embedding_model,
         reranker=state.reranker,
         background_tasks=background_tasks,
         db_path=state.evaluation_db_path,

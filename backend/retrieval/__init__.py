@@ -8,6 +8,7 @@ from backend.retrieval.assets import (
 from backend.retrieval.reranking import load_reranker, rerank_candidate
 from backend.retrieval.vector_index import build_faiss_index, search_faiss
 from backend.retrieval.workflow import retrieve_for_plan
+from backend.retrieval.resources import DocumentResources
 
 __all__ = [
     "build_faiss_index",

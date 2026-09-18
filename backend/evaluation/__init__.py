@@ -1,42 +1,20 @@
-"""RAGAS scoring of the generated answers."""
-
-from backend.evaluation.metrics import (
-    answer_relevancy_scorer,
-    build_evaluation_input,
-    context_precision_scorer,
-    evaluate_answer_relevancy,
-    evaluate_context_precision,
-    evaluate_faithfulness,
-    faithfulness_scorer,
-)
-from backend.evaluation.prompts import (
-    CONTEXT_PRECISION_PROMPT_VERSION,
-    UsefulContextPrompt,
-)
-
-from backend.evaluation.storage import (
-    append_evaluation_record
-)
-
+from backend.evaluation.prompts import CONTEXT_PRECISION_PROMPT_VERSION
+from backend.evaluation.scoring import score_answer
 from backend.evaluation.state_store import (
     create_evaluation_state,
-    initialize_evaluation_store,
+    finish_evaluation_state,
     get_evaluation_state,
-    finish_evaluation_state
+    initialize_evaluation_store,
 )
+from backend.evaluation.storage import append_evaluation_record, save_evaluation_record
 
 __all__ = [
     "CONTEXT_PRECISION_PROMPT_VERSION",
-    "UsefulContextPrompt",
-    "answer_relevancy_scorer",
-    "build_evaluation_input",
-    "context_precision_scorer",
+    "append_evaluation_record",
     "create_evaluation_state",
-    "evaluate_answer_relevancy",
-    "evaluate_context_precision",
-    "evaluate_faithfulness",
-    "faithfulness_scorer",
-    "initialize_evaluation_store",
+    "finish_evaluation_state",
     "get_evaluation_state",
-    "finish_evaluation_state"
+    "initialize_evaluation_store",
+    "save_evaluation_record",
+    "score_answer",
 ]
