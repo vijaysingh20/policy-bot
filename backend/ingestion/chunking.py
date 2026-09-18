@@ -14,33 +14,6 @@ def normalize_page_text(text: str) -> str:
     normalized_lines = re.sub(r"\n{3,}", "\n\n", joined_lines)
     return normalized_lines.strip()
 
-def split_page(
-    page: PageRecord,
-    chunk_size: int,
-    overlap: int
-) -> list[ChunkRecord]:
-    if not (0 <= overlap < chunk_size):
-        raise ValueError("Require 0 <= overlap < chunk_size")
-
-    chunks = []
-    start = 0
-
-    while(start < len(page.text)):
-        end = min(start + chunk_size, len(page.text))
-        chunk_text = page.text[start:end]
-
-        if chunk_text.strip():
-            chunk = ChunkRecord(
-                text= chunk_text,
-                metadata= page.metadata,
-                chunk_number= len(chunks) + 1
-            )
-            chunks.append(chunk)
-        if end == len(page.text):
-            break
-
-        start = end - overlap
-    return chunks
 
 def split_page_recursive(
     page: PageRecord,

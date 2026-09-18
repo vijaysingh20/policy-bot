@@ -22,3 +22,18 @@ dependencies = [
     "sentence-transformers>=6.0.1",
     "uvicorn[standard]>=0.52.4",
 ]
+
+[dependency-groups]
+dev = [
+    "httpx>=0.28.1",
+    "pytest>=9.1.1",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+markers = [
+    "slow: loads real ML models",
+    "eval: calls the LLM / RAGAS (costs money)",
+]
+addopts = "-m 'not slow and not eval'"

@@ -19,4 +19,5 @@ __all__ = [
     "save_manifest",
     "save_retrieval_assets",
     "search_faiss",
+    "DocumentResources"
 ]

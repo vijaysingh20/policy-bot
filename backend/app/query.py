@@ -1,36 +1,32 @@
 import logging
-
-import faiss
 from pathlib import Path
 from uuid import uuid4
+
+import faiss
 from fastapi import BackgroundTasks
 from langsmith import traceable
 from langsmith.run_helpers import get_current_run_tree
 from sentence_transformers import CrossEncoder, SentenceTransformer
 
+from backend.evaluation import create_evaluation_state, save_evaluation_record
+from backend.evaluation.worker import run_evaluation_job
 from backend.generation import (
     build_answer_chain,
     build_context,
     build_query_planner,
-    resolve_answer_sources,
+    resolve_answer_sources
 )
-from backend.observability import print_tracing_status
-from backend.retrieval import (
-    retrieve_for_plan,
-)
+from backend.retrieval import retrieve_for_plan
 from backend.schemas import (
     AnswerDraft,
     ChunkRecord,
+    EvaluationJob,
+    EvaluationState,
     IndexManifest,
     QueryPlan,
-    RetrievalContext,
     QuestionResponse,
-    EvaluationJob,
-    EvaluationState
+    RetrievalContext
 )
-from backend.evaluation.storage import save_evaluation_records
-from backend.evaluation.worker import run_evaluation_job
-from backend.evaluation import create_evaluation_state
 
 logger = logging.getLogger(__name__)
 
@@ -38,13 +34,10 @@ OUT_OF_SCOPE_ANSWER = (
     "I can help with questions about the supplied HR "
     "handbook. Please ask an HR-policy question."
 )
+OUT_OF_SCOPE_REASON = "Question is outside the HR-policy scope."
 
-@traceable(
-    name="hrpolicy_bot_question",
-    process_inputs=lambda inputs: {
-        "question": inputs["question"],
-    }
-)
+
+@traceable(name="hrpolicy_bot_question", process_inputs=lambda inputs: {"question": inputs["question"]})
 def run_question(
     question: str,
     *,
@@ -56,74 +49,43 @@ def run_question(
     background_tasks: BackgroundTasks,
     db_path: Path
 ) -> QuestionResponse:
-    question_run = get_current_run_tree()
     evaluation_id = uuid4()
 
-    trace_id = question_run.id if question_run is not None else None
-    project_name = (
-        question_run.session_name
-        if question_run is not None
-        else None
-    )
-    print_tracing_status()
+    run = get_current_run_tree()
+    trace_id = run.id if run is not None else None
+    project_name = run.session_name if run is not None else None
 
-    planner = build_query_planner()
-
-    plan: QueryPlan = planner.invoke({
-        "question": question
-    })
-    print("\nQuery plan:")
-    print(plan.model_dump_json(indent=2))
+    plan: QueryPlan = build_query_planner().invoke({"question": question})
+    logger.info("Query plan: %s", plan.model_dump_json())
 
     if plan.route == "out_of_scope":
-        draft = AnswerDraft(
-            answer=OUT_OF_SCOPE_ANSWER,
-            source_ids=[],
-        )
-
-        print("\nAnswer:")
-        print(draft.answer)
-        print("\nSources:\nNo sources cited.")
-
-        context = RetrievalContext(
-            context_text="",
-            sources=[],
-        )
-
-        reason = "Question is outside the HR-policy scope."
-
+        draft = AnswerDraft(answer=OUT_OF_SCOPE_ANSWER, source_ids=[])
         create_evaluation_state(
             state=EvaluationState(
-                evaluation_id=evaluation_id,
-                status="skipped",
-                reason=reason,
+                evaluation_id=evaluation_id, status="skipped", reason=OUT_OF_SCOPE_REASON
             ),
-            db_path=db_path,
+            db_path=db_path
         )
 
         try:
-            save_evaluation_records(
-                trace_id=question_run.id if question_run is not None else None,
+            save_evaluation_record(
+                trace_id=trace_id,
                 question=question,
                 plan=plan,
                 draft=draft,
-                context=context,
-                scores=None,
+                context=RetrievalContext(context_text="", sources=[]),
                 status="skipped",
-                reason="Question is outside the HR-policy scope.",
+                reason=OUT_OF_SCOPE_REASON
             )
         except Exception:
-            logger.exception(
-                "Could not log skipped evaluation %s",
-                evaluation_id,
-            )
+            logger.exception("Could not log skipped evaluation %s", evaluation_id)
 
         return QuestionResponse(
             answer=draft.answer,
             sources=[],
             evaluation_status="skipped",
             scores=None,
-            trace_id=question_run.id if question_run is not None else None,
+            trace_id=trace_id
         )
 
     matches = retrieve_for_plan(
@@ -133,31 +95,30 @@ def run_question(
         embedding_model=embedding_model,
         reranker=reranker
     )
+    context = build_context()
 
-    print("\nUnique selected chunks:", len(matches))
-    context = build_context(matches)
-
-    chain = build_answer_chain()
-
-    draft: AnswerDraft = chain.invoke({
-        "context": context.context_text,
-        "question": question
-    })
-
+    draft: AnswerDraft = build_answer_chain().invoke(
+        {"context": context.context_text, "question": question}
+    )
     resolved_sources = resolve_answer_sources(draft, context)
 
-    job = EvaluationJob(
-        evaluation_id=evaluation_id,
-        question=question,
-        query_plan=plan,
-        draft=draft,
-        context=context,
-        manifest=manifest,
-        trace_id=trace_id,
-        project_name=project_name,
+    create_evaluation_state(state=EvaluationState(evaluation_id=evaluation_id), db_path=db_path)
+    background_tasks.add_task(
+        run_evaluation_job,
+        job=EvaluationJob(
+            evaluation_id=evaluation_id,
+            question=question,
+            query_plan=plan,
+            draft=draft,
+            context=context,
+            manifest=manifest,
+            trace_id=trace_id,
+            project_name=project_name
+        ),
+        db_path=db_path
     )
 
-    response = QuestionResponse(
+    return QuestionResponse(
         answer=draft.answer,
         sources=resolved_sources,
         evaluation_id=evaluation_id,
@@ -165,16 +126,3 @@ def run_question(
         scores=None,
         trace_id=trace_id,
     )
-
-    create_evaluation_state(
-        state=EvaluationState(evaluation_id=evaluation_id),
-        db_path=db_path,
-    )
-
-    background_tasks.add_task(
-        run_evaluation_job,
-        job=job,
-        db_path=db_path,
-    )
-
-    return response

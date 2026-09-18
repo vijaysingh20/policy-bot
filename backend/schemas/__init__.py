@@ -15,7 +15,7 @@ from backend.schemas.evaluation import EvaluationInput, EvaluationScores, Evalua
 from backend.schemas.indexing import EmbeddedChunk, IndexManifest, Vector
 from backend.schemas.search import RerankedResult, SearchRequest, SearchResult
 from backend.schemas.api import HealthResponse, QuestionRequest, QuestionResponse, EvaluationState
-from backend.schemas.uploads import UploadInfo, DocumentUploadResponse
+from backend.schemas.uploads import DocumentUploadResponse
 
 __all__ = [
     "AnswerDraft",
@@ -38,5 +38,6 @@ __all__ = [
     "QuestionRequest",
     "QuestionResponse",
     "EvaluationState",
-    "EvaluationJob"
+    "EvaluationJob",
+    "DocumentUploadResponse"
 ]

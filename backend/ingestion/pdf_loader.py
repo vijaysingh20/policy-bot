@@ -4,9 +4,6 @@ from pypdf import PdfReader
 from backend.schemas import PageMetaData, PageRecord
 
 
-def count_content_characters(text: str) -> int:
-    return sum(1 for character in text if not character.isspace())
-
 def load_pdf_pages(
     pdf_path: str | Path,
     *,

@@ -11,7 +11,7 @@ from contextlib import asynccontextmanager
 from backend.config import INDEX_DIR, DATABASE_DIR, UPLOAD_DIR, MAX_UPLOAD_BYTES
 from backend.embedding import load_model_for_query
 from backend.retrieval import DocumentResources, load_reranker, load_retrieval_assets
-from backend.schemas import QuestionResponse, QuestionRequest, EvaluationState, UploadInfo, DocumentUploadResponse
+from backend.schemas import QuestionResponse, QuestionRequest, EvaluationState, DocumentUploadResponse
 from backend.app.query import run_question
 from backend.evaluation import initialize_evaluation_store, get_evaluation_state
 from backend.ingestion import save_uploaded_pdf, initialize_document_store, create_document_record, get_document_record, update_document_record, build_index
@@ -301,35 +301,3 @@ def ingest_document(
     )
 
     return ready_document
-
-@app.post("/upload/inspect", response_model=UploadInfo)
-def inspect_upload(file: UploadFile) -> UploadInfo:
-    try:
-        file.file.seek(0)
-        reader = PdfReader(file.file)
-
-        if reader.is_encrypted:
-            raise HTTPException(
-                status_code=400,
-                detail="Encrypted PDFs are not supported yet."
-            )
-
-        page_count = len(reader.pages)
-        if page_count == 0:
-            raise HTTPException(
-                status_code=400,
-                detail="The PDF contains no pages."
-            )
-        
-        return UploadInfo(
-            filename= file.filename,
-            content_type= file.content_type,
-            page_count=page_count
-        )
-    except PdfReadError as exc:
-        raise HTTPException(
-            status_code=400,
-            detail="The uploaded file could not be read as a PDF."
-        ) from exc
-    finally:
-        file.file.seek(0)

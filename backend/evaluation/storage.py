@@ -1,4 +1,5 @@
 from pathlib import Path
+from uuid import UUID
 
 from backend.config import CHAT_MODEL, EVALUATION_LOG
 from backend.evaluation.prompts import CONTEXT_PRECISION_PROMPT_VERSION
@@ -24,6 +25,7 @@ def append_evaluation_record(
 
 def save_evaluation_record(
     *,
+    trace_id: UUID | None = None,
     question: str,
     plan: QueryPlan,
     draft: AnswerDraft,
@@ -34,6 +36,7 @@ def save_evaluation_record(
     log_path: Path = EVALUATION_LOG
 ) -> EvaluationRecord:
     record = EvaluationRecord(
+        trace_id=trace_id,
         question=question,
         query_plan=plan,
         draft=draft,
