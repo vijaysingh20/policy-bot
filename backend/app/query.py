@@ -97,7 +97,7 @@ def run_question(
         embedding_model=embedding_model,
         reranker=reranker
     )
-    context = build_context()
+    context = build_context(matches)
 
     draft: AnswerDraft = build_answer_chain().invoke(
         {"context": context.context_text, "question": question}
