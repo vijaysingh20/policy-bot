@@ -1,44 +1,34 @@
+import logging
 import re
 
 from backend.schemas import AnswerDraft, ContextSource, RetrievalContext
 
-def validate_answer_citations(
-    draft: AnswerDraft,
-    context: RetrievalContext
-) -> None:
-    allowed_ids = {
-        source.source_id for source in context.sources
-    }
+logger = logging.getLogger(__name__)
 
-    inline_ids = set(
-        re.findall(r"\[(S\d+)\]", draft.answer)
+CITATION = re.compile(r"\[(S\d+)\]")
+CITATION_WITH_LEADING_SPACE = re.compile(r"\s*\[(S\d+)\]")
+
+
+def sanitize_citations(draft: AnswerDraft, context: RetrievalContext) -> AnswerDraft:
+    allowed = {source.source_id for source in context.sources}
+    referenced = set(CITATION.findall(draft.answer)) | set(draft.source_ids)
+    unknown = referenced - allowed
+    if unknown:
+        logging.warning("LLM cited unknown sources %s; removing them.", sorted(unknown))
+
+    answer = CITATION_WITH_LEADING_SPACE.sub(
+        lambda match: match.group(0) if match.group(1) in allowed else "",
+        draft.answer,
     )
 
-    declared_ids = set(draft.source_ids)
+    inline_ids = list(dict.fromkeys(CITATION.findall(answer)))
+    declare_only = [sid for sid in dict.fromkeys(draft.source_ids)
+                    if sid in allowed and sid not in inline_ids]
+    return AnswerDraft(answer=answer, source_ids=inline_ids + declare_only)
 
-    referenced_ids = inline_ids | declared_ids
-
-    invalid_ids = referenced_ids - allowed_ids
-
-    if invalid_ids:
-        raise ValueError(
-            f"Unknown source IDs: {sorted(invalid_ids)}"
-        )
-
-    if inline_ids != declared_ids:
-        raise ValueError("Mismatch between inline and declared IDs")
 
 def resolve_answer_sources(
-    draft: AnswerDraft,
-    context: RetrievalContext
+    draft: AnswerDraft, context: RetrievalContext
 ) -> list[ContextSource]:
-    validate_answer_citations(draft, context)
-
-    cited_ids = set(draft.source_ids)
-    resolved_sources: list[ContextSource] = []
-
-    for source in context.sources:
-        if source.source_id in cited_ids:
-            resolved_sources.append(source)
-
-    return resolved_sources
+    by_id = {source.source_id: source for source in context.sources}
+    return [by_id[sid] for sid in draft.source_ids if sid in by_id]

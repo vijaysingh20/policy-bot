@@ -8,7 +8,7 @@ from backend.retrieval.assets import (
 from backend.retrieval.reranking import load_reranker, rerank_candidate
 from backend.retrieval.vector_index import build_faiss_index, search_faiss
 from backend.retrieval.workflow import retrieve_for_plan
-from backend.retrieval.resources import DocumentResources
+from backend.retrieval.resources import DocumentResources, load_document_resources
 
 __all__ = [
     "build_faiss_index",
@@ -19,5 +19,6 @@ __all__ = [
     "save_manifest",
     "save_retrieval_assets",
     "search_faiss",
-    "DocumentResources"
+    "DocumentResources",
+    "load_document_resources"
 ]

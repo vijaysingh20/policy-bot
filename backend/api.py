@@ -1,3 +1,6 @@
+import logging
+from pathlib import Path
+
 from uuid import UUID, uuid4
 from pypdf import PdfReader
 from pypdf.errors import PdfReadError
@@ -8,44 +11,48 @@ from backend.schemas import HealthResponse
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 
-from backend.config import INDEX_DIR, DATABASE_DIR, UPLOAD_DIR, MAX_UPLOAD_BYTES
-from backend.embedding import load_model_for_query
-from backend.retrieval import DocumentResources, load_reranker, load_retrieval_assets
+from backend.config import DATABASE_DIR, EMBEDDING_MODEL, INDEX_DIR, MAX_UPLOAD_BYTES, UPLOAD_DIR
+from backend.embedding import load_model_for_ingestion
+from backend.retrieval import DocumentResources, load_document_resources, load_reranker, load_retrieval_assets
 from backend.schemas import QuestionResponse, QuestionRequest, EvaluationState, DocumentUploadResponse
 from backend.app.query import run_question
 from backend.evaluation import initialize_evaluation_store, get_evaluation_state
 from backend.ingestion import save_uploaded_pdf, initialize_document_store, create_document_record, get_document_record, update_document_record, build_index
 
+logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
+logger = logging.getLogger(__name__)
+
+
+def load_resources_for(assets_dir: Path, state) -> DocumentResources:
+    return load_document_resources(
+        assets_dir,
+        shared_model=state.embedding_model,
+        shared_model_name=EMBEDDING_MODEL,
+        shared_revision=state.embedding_revision
+    )
+
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
-    print("Loading retrieval resources...")
-    index, chunks, manifest = load_retrieval_assets(INDEX_DIR)
-
-    app.state.default_resources = DocumentResources(
-        index=index,
-        chunks=chunks,
-        manifest=manifest,
-        embedding_model=load_model_for_query(manifest)
+    logger.info("Loading embedding model and reranker...")
+    app.state.embedding_model, app.state.embedding_revision = (
+        load_model_for_ingestion(EMBEDDING_MODEL)
     )
     app.state.reranker = load_reranker()
     app.state.document_resources = {}
 
-    print("Loaded vectors:", app.state.default_resources.index.ntotal)
+    try:
+        app.state.default_resources = load_resources_for(INDEX_DIR, app.state)
+        logger.info("Default handbook loaded: %d vectors", app.state.default_resources.index.ntotal)
+    except FileNotFoundError:
+        app.state.default_resources = None
+        logger.info("No default handbook index at %s; upload a PDF to begin.", INDEX_DIR)
 
     db_path = DATABASE_DIR / "evaluations.sqlite3"
     initialize_evaluation_store(db_path)
     initialize_document_store(db_path)
-
     app.state.evaluation_db_path = db_path
 
-    try:
-        yield
-    finally:
-        print("Releasing retrieval resources...")
-        del app.state.default_resources
-        del app.state.reranker
-        del app.state.evaluation_db_path
-        del app.state.document_resources
+    yield
 
 app = FastAPI(
     title="HR Policy Bot",
@@ -74,13 +81,14 @@ def resolve_document_resources(
     state
 ) -> DocumentResources:
     if document_id is None:
+        if state.default_resources is None:
+            raise HTTPException(
+                status_code=409,
+                detail="No default handbook is loaded. Upload a PDF and pass its document_id.",
+            )
         return state.default_resources
 
-    document = get_document_record(
-        document_id=document_id,
-        db_path=state.evaluation_db_path
-    )
-
+    document = get_document_record(document_id=document_id, db_path=state.evaluation_db_path)
     if document is None:
         raise HTTPException(status_code=404, detail="Document not found.")
     if document.status != "ready":
@@ -93,33 +101,13 @@ def resolve_document_resources(
     if cached is not None:
         return cached
 
-    assets_dir = INDEX_DIR.parent / str(document_id)
     try:
-        index, chunks, manifest = load_retrieval_assets(assets_dir)
+        resources = load_resources_for(INDEX_DIR.parent / str(document_id), state)
     except (OSError, ValueError, RuntimeError) as exc:
         raise HTTPException(
             status_code=409,
             detail="The document's retrieval assets are unavailable.",
         ) from exc
-
-    default = state.default_resources
-    same_embedding_config = (
-        manifest.embedding_model == default.manifest.embedding_model
-        and manifest.embedding_revision == default.manifest.embedding_revision
-        and manifest.dimensions == default.manifest.dimensions
-    )
-    embedding_model = (
-        default.embedding_model
-        if same_embedding_config
-        else load_model_for_query(manifest)
-    )
-
-    resources = DocumentResources(
-        index=index,
-        chunks=chunks,
-        manifest=manifest,
-        embedding_model=embedding_model
-    )
 
     state.document_resources[document_id] = resources
     return resources

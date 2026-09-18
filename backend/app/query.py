@@ -14,7 +14,8 @@ from backend.generation import (
     build_answer_chain,
     build_context,
     build_query_planner,
-    resolve_answer_sources
+    resolve_answer_sources,
+    sanitize_citations
 )
 from backend.retrieval import retrieve_for_plan
 from backend.schemas import (
@@ -83,6 +84,7 @@ def run_question(
         return QuestionResponse(
             answer=draft.answer,
             sources=[],
+            evaluation_id=evaluation_id,
             evaluation_status="skipped",
             scores=None,
             trace_id=trace_id
@@ -100,6 +102,7 @@ def run_question(
     draft: AnswerDraft = build_answer_chain().invoke(
         {"context": context.context_text, "question": question}
     )
+    draft = sanitize_citations(draft, context)
     resolved_sources = resolve_answer_sources(draft, context)
 
     create_evaluation_state(state=EvaluationState(evaluation_id=evaluation_id), db_path=db_path)

@@ -3,7 +3,7 @@
 from backend.generation.answering import build_answer_chain
 from backend.generation.citations import (
     resolve_answer_sources,
-    validate_answer_citations,
+    sanitize_citations,
 )
 from backend.generation.context import build_context
 from backend.generation.prompts import build_answer_prompt, build_planner_prompt
@@ -16,5 +16,5 @@ __all__ = [
     "build_planner_prompt",
     "build_query_planner",
     "resolve_answer_sources",
-    "validate_answer_citations",
+    "sanitize_citations",
 ]
