@@ -91,10 +91,6 @@ def answer_relevancy_scorer(
         embeddings=evaluator_embeddings(manifest.embedding_model, manifest.embedding_revision),
     )
 
-    return AnswerRelevancy(
-        llm=build_evaluator_llm(),
-        embeddings=evaluator_embeddings
-    )
 
 def evaluate_answer_relevancy(
     sample: EvaluationInput,
