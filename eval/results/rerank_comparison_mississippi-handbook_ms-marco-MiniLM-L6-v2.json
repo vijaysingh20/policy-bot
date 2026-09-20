@@ -1,0 +1,1095 @@
+{
+  "document": "mississippi-handbook.pdf",
+  "reranker": "cross-encoder/ms-marco-MiniLM-L6-v2",
+  "summary": {
+    "simple": {
+      "questions": 8,
+      "before_hit": 0.75,
+      "after_hit": 1,
+      "before_mrr": 0.6875,
+      "after_mrr": 0.9166666666666666,
+      "pool_recall": 1
+    },
+    "all": {
+      "questions": 25,
+      "before_hit": 0.84,
+      "after_hit": 0.88,
+      "before_mrr": 0.8,
+      "after_mrr": 0.8066666666666666,
+      "pool_recall": 0.96
+    },
+    "paraphrase": {
+      "questions": 12,
+      "before_hit": 0.8333333333333334,
+      "after_hit": 0.75,
+      "before_mrr": 0.7916666666666666,
+      "after_mrr": 0.6944444444444444,
+      "pool_recall": 0.9166666666666666
+    },
+    "multi_part": {
+      "questions": 5,
+      "before_hit": 1,
+      "after_hit": 1,
+      "before_mrr": 1.0,
+      "after_mrr": 0.9,
+      "pool_recall": 1
+    }
+  },
+  "questions": [
+    {
+      "id": "m01",
+      "category": "simple",
+      "question": "How much personal leave does an employee earn per month in their first three years?",
+      "relevant_pages": [
+        11
+      ],
+      "candidate_pages": [
+        11,
+        12,
+        12,
+        12,
+        11,
+        13,
+        13,
+        18,
+        24,
+        13,
+        17,
+        15,
+        17,
+        30,
+        12,
+        24,
+        18,
+        28,
+        16,
+        15
+      ],
+      "before_pages": [
+        11,
+        12,
+        12
+      ],
+      "after_pages": [
+        11,
+        12,
+        11
+      ],
+      "before_rr": 1.0,
+      "after_rr": 1.0
+    },
+    {
+      "id": "m02",
+      "category": "simple",
+      "question": "How much Major Medical Leave does a new employee earn per month?",
+      "relevant_pages": [
+        12
+      ],
+      "candidate_pages": [
+        12,
+        11,
+        12,
+        13,
+        18,
+        13,
+        13,
+        13,
+        11,
+        11,
+        15,
+        24,
+        16,
+        21,
+        22,
+        16,
+        29,
+        16,
+        22,
+        22
+      ],
+      "before_pages": [
+        12,
+        11,
+        12
+      ],
+      "after_pages": [
+        12,
+        11,
+        12
+      ],
+      "before_rr": 1.0,
+      "after_rr": 1.0
+    },
+    {
+      "id": "m03",
+      "category": "simple",
+      "question": "How many days of Major Medical Leave can I use for a death in my immediate family?",
+      "relevant_pages": [
+        13
+      ],
+      "candidate_pages": [
+        12,
+        13,
+        13,
+        12,
+        18,
+        13,
+        13,
+        11,
+        17,
+        16,
+        21,
+        22,
+        19,
+        12,
+        12,
+        16,
+        17,
+        19,
+        14,
+        24
+      ],
+      "before_pages": [
+        12,
+        13,
+        13
+      ],
+      "after_pages": [
+        13,
+        13,
+        12
+      ],
+      "before_rr": 0.5,
+      "after_rr": 1.0
+    },
+    {
+      "id": "m04",
+      "category": "simple",
+      "question": "Is there a cap on how many personal leave days I can be paid for when I leave the job?",
+      "relevant_pages": [
+        11
+      ],
+      "candidate_pages": [
+        11,
+        12,
+        12,
+        11,
+        24,
+        12,
+        28,
+        17,
+        16,
+        12,
+        13,
+        18,
+        10,
+        18,
+        24,
+        13,
+        15,
+        14,
+        17,
+        14
+      ],
+      "before_pages": [
+        11,
+        12,
+        12
+      ],
+      "after_pages": [
+        11,
+        13,
+        28
+      ],
+      "before_rr": 1.0,
+      "after_rr": 1.0
+    },
+    {
+      "id": "m05",
+      "category": "simple",
+      "question": "Who is eligible for FMLA leave under this handbook?",
+      "relevant_pages": [
+        18
+      ],
+      "candidate_pages": [
+        22,
+        21,
+        21,
+        22,
+        18,
+        18,
+        22,
+        19,
+        23,
+        19,
+        23,
+        23,
+        14,
+        19,
+        12,
+        11,
+        26,
+        8,
+        13,
+        13
+      ],
+      "before_pages": [
+        22,
+        21,
+        21
+      ],
+      "after_pages": [
+        18,
+        23,
+        22
+      ],
+      "before_rr": 0.0,
+      "after_rr": 1.0
+    },
+    {
+      "id": "m06",
+      "category": "simple",
+      "question": "How many days of paid military leave do reservists get for training?",
+      "relevant_pages": [
+        24
+      ],
+      "candidate_pages": [
+        24,
+        24,
+        11,
+        19,
+        18,
+        12,
+        19,
+        12,
+        15,
+        17,
+        13,
+        16,
+        22,
+        13,
+        11,
+        19,
+        18,
+        14,
+        15,
+        14
+      ],
+      "before_pages": [
+        24,
+        24,
+        11
+      ],
+      "after_pages": [
+        24,
+        24,
+        19
+      ],
+      "before_rr": 1.0,
+      "after_rr": 1.0
+    },
+    {
+      "id": "m07",
+      "category": "simple",
+      "question": "How much notice must I give before resigning?",
+      "relevant_pages": [
+        33
+      ],
+      "candidate_pages": [
+        46,
+        11,
+        16,
+        17,
+        11,
+        22,
+        33,
+        22,
+        17,
+        49,
+        15,
+        48,
+        12,
+        48,
+        33,
+        54,
+        44,
+        42,
+        23,
+        12
+      ],
+      "before_pages": [
+        46,
+        11,
+        16
+      ],
+      "after_pages": [
+        22,
+        46,
+        33
+      ],
+      "before_rr": 0.0,
+      "after_rr": 0.3333333333333333
+    },
+    {
+      "id": "m08",
+      "category": "simple",
+      "question": "How many years of PERS participation let an employee retire at any age if hired before June 30, 2011?",
+      "relevant_pages": [
+        30
+      ],
+      "candidate_pages": [
+        30,
+        11,
+        30,
+        12,
+        37,
+        17,
+        56,
+        61,
+        39,
+        55,
+        42,
+        62,
+        38,
+        60,
+        26,
+        58,
+        17,
+        18,
+        63,
+        36
+      ],
+      "before_pages": [
+        30,
+        11,
+        30
+      ],
+      "after_pages": [
+        30,
+        30,
+        12
+      ],
+      "before_rr": 1.0,
+      "after_rr": 1.0
+    },
+    {
+      "id": "m09",
+      "category": "paraphrase",
+      "question": "My mother-in-law is in the hospital. Can I take paid time off to help her?",
+      "relevant_pages": [
+        13
+      ],
+      "candidate_pages": [
+        13,
+        13,
+        13,
+        12,
+        18,
+        13,
+        24,
+        17,
+        19,
+        16,
+        12,
+        24,
+        16,
+        29,
+        12,
+        21,
+        21,
+        11,
+        25,
+        25
+      ],
+      "before_pages": [
+        13,
+        13,
+        13
+      ],
+      "after_pages": [
+        13,
+        13,
+        24
+      ],
+      "before_rr": 1.0,
+      "after_rr": 1.0
+    },
+    {
+      "id": "m10",
+      "category": "paraphrase",
+      "question": "How much time off do I get when my grandfather passes away?",
+      "relevant_pages": [
+        13
+      ],
+      "candidate_pages": [
+        12,
+        12,
+        19,
+        17,
+        13,
+        11,
+        12,
+        13,
+        14,
+        16,
+        13,
+        19,
+        18,
+        17,
+        20,
+        24,
+        22,
+        53,
+        18,
+        16
+      ],
+      "before_pages": [
+        12,
+        12,
+        19
+      ],
+      "after_pages": [
+        12,
+        11,
+        13
+      ],
+      "before_rr": 0.0,
+      "after_rr": 0.3333333333333333
+    },
+    {
+      "id": "m11",
+      "category": "paraphrase",
+      "question": "Can I give some of my leave to a coworker who has cancer?",
+      "relevant_pages": [
+        16
+      ],
+      "candidate_pages": [
+        16,
+        17,
+        16,
+        16,
+        17,
+        13,
+        17,
+        21,
+        13,
+        12,
+        22,
+        21,
+        17,
+        13,
+        25,
+        12,
+        21,
+        25,
+        15,
+        22
+      ],
+      "before_pages": [
+        16,
+        17,
+        16
+      ],
+      "after_pages": [
+        16,
+        16,
+        17
+      ],
+      "before_rr": 1.0,
+      "after_rr": 1.0
+    },
+    {
+      "id": "m12",
+      "category": "paraphrase",
+      "question": "Do I get a payout for unused vacation days when I resign?",
+      "relevant_pages": [
+        11
+      ],
+      "candidate_pages": [
+        11,
+        14,
+        24,
+        12,
+        10,
+        12,
+        17,
+        23,
+        15,
+        15,
+        24,
+        13,
+        10,
+        15,
+        28,
+        23,
+        22,
+        12,
+        17,
+        14
+      ],
+      "before_pages": [
+        11,
+        14,
+        24
+      ],
+      "after_pages": [
+        11,
+        15,
+        12
+      ],
+      "before_rr": 1.0,
+      "after_rr": 1.0
+    },
+    {
+      "id": "m13",
+      "category": "paraphrase",
+      "question": "Can I work from home a couple of days a week?",
+      "relevant_pages": [
+        32
+      ],
+      "candidate_pages": [
+        32,
+        26,
+        21,
+        12,
+        11,
+        10,
+        13,
+        32,
+        15,
+        12,
+        24,
+        25,
+        39,
+        24,
+        13,
+        18,
+        14,
+        14,
+        28,
+        15
+      ],
+      "before_pages": [
+        32,
+        26,
+        21
+      ],
+      "after_pages": [
+        32,
+        26,
+        13
+      ],
+      "before_rr": 1.0,
+      "after_rr": 1.0
+    },
+    {
+      "id": "m14",
+      "category": "paraphrase",
+      "question": "Is it okay for me to use medical marijuana and still come to work?",
+      "relevant_pages": [
+        26,
+        27
+      ],
+      "candidate_pages": [
+        27,
+        26,
+        27,
+        26,
+        37,
+        37,
+        45,
+        13,
+        12,
+        13,
+        13,
+        19,
+        18,
+        19,
+        23,
+        25,
+        22,
+        12,
+        26,
+        24
+      ],
+      "before_pages": [
+        27,
+        26,
+        27
+      ],
+      "after_pages": [
+        26,
+        27,
+        26
+      ],
+      "before_rr": 1.0,
+      "after_rr": 1.0
+    },
+    {
+      "id": "m15",
+      "category": "paraphrase",
+      "question": "Can I date someone who reports to me at work?",
+      "relevant_pages": [
+        39
+      ],
+      "candidate_pages": [
+        39,
+        45,
+        39,
+        33,
+        34,
+        51,
+        33,
+        35,
+        40,
+        49,
+        36,
+        33,
+        34,
+        45,
+        35,
+        40,
+        50,
+        49,
+        48,
+        23
+      ],
+      "before_pages": [
+        39,
+        45,
+        39
+      ],
+      "after_pages": [
+        45,
+        45,
+        33
+      ],
+      "before_rr": 1.0,
+      "after_rr": 0.0
+    },
+    {
+      "id": "m16",
+      "category": "paraphrase",
+      "question": "How often can I donate blood and still be covered by leave?",
+      "relevant_pages": [
+        25
+      ],
+      "candidate_pages": [
+        25,
+        16,
+        25,
+        16,
+        16,
+        17,
+        17,
+        17,
+        12,
+        11,
+        18,
+        19,
+        13,
+        21,
+        20,
+        12,
+        19,
+        18,
+        12,
+        13
+      ],
+      "before_pages": [
+        25,
+        16,
+        25
+      ],
+      "after_pages": [
+        25,
+        16,
+        25
+      ],
+      "before_rr": 1.0,
+      "after_rr": 1.0
+    },
+    {
+      "id": "m17",
+      "category": "paraphrase",
+      "question": "If I get hurt on the job, how much of my wages does workers' comp replace?",
+      "relevant_pages": [
+        28
+      ],
+      "candidate_pages": [
+        28,
+        28,
+        28,
+        29,
+        28,
+        29,
+        13,
+        59,
+        26,
+        23,
+        12,
+        12,
+        16,
+        22,
+        11,
+        8,
+        14,
+        49,
+        44,
+        24
+      ],
+      "before_pages": [
+        28,
+        28,
+        28
+      ],
+      "after_pages": [
+        28,
+        28,
+        28
+      ],
+      "before_rr": 1.0,
+      "after_rr": 1.0
+    },
+    {
+      "id": "m18",
+      "category": "paraphrase",
+      "question": "My spouse and I both work for the state. Does that change how much family leave we each get?",
+      "relevant_pages": [
+        21
+      ],
+      "candidate_pages": [
+        12,
+        21,
+        21,
+        18,
+        12,
+        12,
+        13,
+        11,
+        12,
+        14,
+        18,
+        24,
+        15,
+        8,
+        19,
+        11,
+        8,
+        13,
+        18,
+        15
+      ],
+      "before_pages": [
+        12,
+        21,
+        21
+      ],
+      "after_pages": [
+        21,
+        18,
+        21
+      ],
+      "before_rr": 0.5,
+      "after_rr": 1.0
+    },
+    {
+      "id": "m19",
+      "category": "paraphrase",
+      "question": "Can I be fired for who I vote for?",
+      "relevant_pages": [
+        31
+      ],
+      "candidate_pages": [
+        35,
+        35,
+        36,
+        36,
+        33,
+        35,
+        26,
+        36,
+        34,
+        47,
+        36,
+        61,
+        34,
+        6,
+        61,
+        51,
+        62,
+        27,
+        17,
+        48
+      ],
+      "before_pages": [
+        35,
+        35,
+        36
+      ],
+      "after_pages": [
+        35,
+        35,
+        36
+      ],
+      "before_rr": 0.0,
+      "after_rr": 0.0
+    },
+    {
+      "id": "m20",
+      "category": "paraphrase",
+      "question": "If I get promoted to a different agency, do I keep my seniority for leave purposes?",
+      "relevant_pages": [
+        9
+      ],
+      "candidate_pages": [
+        9,
+        11,
+        17,
+        8,
+        24,
+        15,
+        12,
+        11,
+        24,
+        48,
+        46,
+        14,
+        13,
+        15,
+        25,
+        22,
+        26,
+        15,
+        15,
+        8
+      ],
+      "before_pages": [
+        9,
+        11,
+        17
+      ],
+      "after_pages": [
+        24,
+        22,
+        11
+      ],
+      "before_rr": 1.0,
+      "after_rr": 0.0
+    },
+    {
+      "id": "m21",
+      "category": "multi_part",
+      "question": "How much personal leave and how much Major Medical Leave does an employee with 10 years of service earn per month?",
+      "relevant_pages": [
+        11,
+        12
+      ],
+      "candidate_pages": [
+        12,
+        11,
+        12,
+        13,
+        13,
+        18,
+        13,
+        13,
+        11,
+        11,
+        12,
+        15,
+        16,
+        21,
+        17,
+        16,
+        22,
+        24,
+        22,
+        19
+      ],
+      "before_pages": [
+        12,
+        11,
+        12
+      ],
+      "after_pages": [
+        11,
+        12,
+        12
+      ],
+      "before_rr": 1.0,
+      "after_rr": 1.0
+    },
+    {
+      "id": "m22",
+      "category": "multi_part",
+      "question": "How long is the probationary period, and can I apply for a promotion while still on probation?",
+      "relevant_pages": [
+        8,
+        9
+      ],
+      "candidate_pages": [
+        8,
+        8,
+        48,
+        42,
+        45,
+        44,
+        14,
+        47,
+        59,
+        49,
+        51,
+        11,
+        61,
+        24,
+        26,
+        14,
+        50,
+        62,
+        15,
+        42
+      ],
+      "before_pages": [
+        8,
+        8,
+        48
+      ],
+      "after_pages": [
+        8,
+        8,
+        44
+      ],
+      "before_rr": 1.0,
+      "after_rr": 1.0
+    },
+    {
+      "id": "m23",
+      "category": "multi_part",
+      "question": "How many weeks of FMLA leave can I take, and must I use my paid leave first?",
+      "relevant_pages": [
+        18,
+        19
+      ],
+      "candidate_pages": [
+        18,
+        22,
+        22,
+        23,
+        11,
+        18,
+        21,
+        12,
+        23,
+        22,
+        21,
+        19,
+        23,
+        19,
+        12,
+        24,
+        11,
+        12,
+        13,
+        13
+      ],
+      "before_pages": [
+        18,
+        22,
+        22
+      ],
+      "after_pages": [
+        22,
+        18,
+        23
+      ],
+      "before_rr": 1.0,
+      "after_rr": 0.5
+    },
+    {
+      "id": "m24",
+      "category": "multi_part",
+      "question": "How many days of organ donor leave can I use to donate a kidney, and do I have to use my sick leave first?",
+      "relevant_pages": [
+        25
+      ],
+      "candidate_pages": [
+        25,
+        16,
+        17,
+        25,
+        17,
+        12,
+        17,
+        16,
+        11,
+        13,
+        16,
+        19,
+        18,
+        17,
+        13,
+        18,
+        26,
+        22,
+        24,
+        19
+      ],
+      "before_pages": [
+        25,
+        16,
+        17
+      ],
+      "after_pages": [
+        25,
+        17,
+        25
+      ],
+      "before_rr": 1.0,
+      "after_rr": 1.0
+    },
+    {
+      "id": "m25",
+      "category": "multi_part",
+      "question": "How many years must I contribute to PERS before I can draw retirement benefits, and can I also join a credit union?",
+      "relevant_pages": [
+        30,
+        31
+      ],
+      "candidate_pages": [
+        30,
+        30,
+        31,
+        29,
+        11,
+        29,
+        16,
+        12,
+        28,
+        31,
+        12,
+        12,
+        18,
+        30,
+        17,
+        11,
+        42,
+        30,
+        15,
+        17
+      ],
+      "before_pages": [
+        30,
+        30,
+        31
+      ],
+      "after_pages": [
+        30,
+        30,
+        29
+      ],
+      "before_rr": 1.0,
+      "after_rr": 1.0
+    }
+  ]
+}

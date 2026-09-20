@@ -1,0 +1,1094 @@
+{
+  "reranker": "BAAI/bge-reranker-base",
+  "summary": {
+    "simple": {
+      "questions": 8,
+      "before_hit": 1,
+      "after_hit": 1,
+      "before_mrr": 0.9375,
+      "after_mrr": 0.9375,
+      "pool_recall": 1
+    },
+    "all": {
+      "questions": 25,
+      "before_hit": 1,
+      "after_hit": 1,
+      "before_mrr": 0.98,
+      "after_mrr": 0.8866666666666667,
+      "pool_recall": 1
+    },
+    "paraphrase": {
+      "questions": 12,
+      "before_hit": 1,
+      "after_hit": 1,
+      "before_mrr": 1.0,
+      "after_mrr": 0.8611111111111112,
+      "pool_recall": 1
+    },
+    "multi_part": {
+      "questions": 5,
+      "before_hit": 1,
+      "after_hit": 1,
+      "before_mrr": 1.0,
+      "after_mrr": 0.8666666666666667,
+      "pool_recall": 1
+    }
+  },
+  "questions": [
+    {
+      "id": "q01",
+      "category": "simple",
+      "question": "How long is the probation period for new employees?",
+      "relevant_pages": [
+        19
+      ],
+      "candidate_pages": [
+        19,
+        24,
+        34,
+        19,
+        24,
+        23,
+        29,
+        24,
+        41,
+        17,
+        23,
+        31,
+        21,
+        15,
+        25,
+        25,
+        18,
+        38,
+        34,
+        30
+      ],
+      "before_pages": [
+        19,
+        24,
+        34
+      ],
+      "after_pages": [
+        19,
+        24,
+        24
+      ],
+      "before_rr": 1.0,
+      "after_rr": 1.0
+    },
+    {
+      "id": "q02",
+      "category": "simple",
+      "question": "What is the maximum sick leave an employee can accrue?",
+      "relevant_pages": [
+        25
+      ],
+      "candidate_pages": [
+        25,
+        26,
+        25,
+        26,
+        26,
+        23,
+        26,
+        27,
+        24,
+        29,
+        26,
+        24,
+        21,
+        25,
+        34,
+        30,
+        30,
+        18,
+        29,
+        34
+      ],
+      "before_pages": [
+        25,
+        26,
+        25
+      ],
+      "after_pages": [
+        25,
+        24,
+        23
+      ],
+      "before_rr": 1.0,
+      "after_rr": 1.0
+    },
+    {
+      "id": "q03",
+      "category": "simple",
+      "question": "How many hours of personal leave can I use in a 12-month period?",
+      "relevant_pages": [
+        24
+      ],
+      "candidate_pages": [
+        23,
+        24,
+        24,
+        25,
+        24,
+        23,
+        26,
+        34,
+        23,
+        29,
+        27,
+        18,
+        29,
+        21,
+        33,
+        22,
+        31,
+        30,
+        28,
+        27
+      ],
+      "before_pages": [
+        23,
+        24,
+        24
+      ],
+      "after_pages": [
+        24,
+        18,
+        33
+      ],
+      "before_rr": 0.5,
+      "after_rr": 1.0
+    },
+    {
+      "id": "q04",
+      "category": "simple",
+      "question": "When do benefits become effective for a new regular full-time employee?",
+      "relevant_pages": [
+        22
+      ],
+      "candidate_pages": [
+        22,
+        22,
+        25,
+        34,
+        23,
+        18,
+        25,
+        25,
+        24,
+        30,
+        30,
+        31,
+        27,
+        30,
+        6,
+        32,
+        29,
+        27,
+        26,
+        26
+      ],
+      "before_pages": [
+        22,
+        22,
+        25
+      ],
+      "after_pages": [
+        22,
+        30,
+        22
+      ],
+      "before_rr": 1.0,
+      "after_rr": 1.0
+    },
+    {
+      "id": "q05",
+      "category": "simple",
+      "question": "When are bi-weekly employees paid?",
+      "relevant_pages": [
+        32
+      ],
+      "candidate_pages": [
+        32,
+        32,
+        23,
+        25,
+        34,
+        31,
+        34,
+        33,
+        18,
+        26,
+        34,
+        34,
+        25,
+        22,
+        23,
+        24,
+        35,
+        18,
+        24,
+        23
+      ],
+      "before_pages": [
+        32,
+        32,
+        23
+      ],
+      "after_pages": [
+        32,
+        32,
+        18
+      ],
+      "before_rr": 1.0,
+      "after_rr": 1.0
+    },
+    {
+      "id": "q06",
+      "category": "simple",
+      "question": "How long is the meal period?",
+      "relevant_pages": [
+        34
+      ],
+      "candidate_pages": [
+        34,
+        32,
+        31,
+        23,
+        23,
+        23,
+        25,
+        24,
+        29,
+        25,
+        30,
+        35,
+        24,
+        19,
+        27,
+        27,
+        24,
+        26,
+        29,
+        33
+      ],
+      "before_pages": [
+        34,
+        32,
+        31
+      ],
+      "after_pages": [
+        34,
+        35,
+        23
+      ],
+      "before_rr": 1.0,
+      "after_rr": 1.0
+    },
+    {
+      "id": "q07",
+      "category": "simple",
+      "question": "Are weapons allowed on college property?",
+      "relevant_pages": [
+        16
+      ],
+      "candidate_pages": [
+        16,
+        39,
+        37,
+        13,
+        11,
+        16,
+        12,
+        39,
+        11,
+        14,
+        28,
+        14,
+        40,
+        13,
+        39,
+        27,
+        36,
+        28,
+        33,
+        13
+      ],
+      "before_pages": [
+        16,
+        39,
+        37
+      ],
+      "after_pages": [
+        16,
+        39,
+        39
+      ],
+      "before_rr": 1.0,
+      "after_rr": 1.0
+    },
+    {
+      "id": "q08",
+      "category": "simple",
+      "question": "Who is eligible to apply for posted internal jobs?",
+      "relevant_pages": [
+        17
+      ],
+      "candidate_pages": [
+        17,
+        16,
+        18,
+        18,
+        12,
+        27,
+        20,
+        17,
+        18,
+        24,
+        27,
+        18,
+        33,
+        28,
+        16,
+        28,
+        43,
+        3,
+        2,
+        30
+      ],
+      "before_pages": [
+        17,
+        16,
+        18
+      ],
+      "after_pages": [
+        27,
+        17,
+        18
+      ],
+      "before_rr": 1.0,
+      "after_rr": 0.5
+    },
+    {
+      "id": "q09",
+      "category": "paraphrase",
+      "question": "When can a new hire start taking vacation days?",
+      "relevant_pages": [
+        24
+      ],
+      "candidate_pages": [
+        24,
+        24,
+        25,
+        32,
+        25,
+        22,
+        23,
+        25,
+        34,
+        31,
+        26,
+        24,
+        26,
+        18,
+        23,
+        29,
+        34,
+        28,
+        34,
+        21
+      ],
+      "before_pages": [
+        24,
+        24,
+        25
+      ],
+      "after_pages": [
+        24,
+        24,
+        22
+      ],
+      "before_rr": 1.0,
+      "after_rr": 1.0
+    },
+    {
+      "id": "q10",
+      "category": "paraphrase",
+      "question": "I've worked here for 7 years. How many vacation days do I get each year?",
+      "relevant_pages": [
+        23
+      ],
+      "candidate_pages": [
+        23,
+        23,
+        24,
+        25,
+        25,
+        25,
+        24,
+        26,
+        34,
+        22,
+        18,
+        24,
+        32,
+        23,
+        24,
+        41,
+        30,
+        26,
+        31,
+        18
+      ],
+      "before_pages": [
+        23,
+        23,
+        24
+      ],
+      "after_pages": [
+        24,
+        23,
+        24
+      ],
+      "before_rr": 1.0,
+      "after_rr": 0.5
+    },
+    {
+      "id": "q11",
+      "category": "paraphrase",
+      "question": "My grandmother passed away. How much paid time off do I get?",
+      "relevant_pages": [
+        27
+      ],
+      "candidate_pages": [
+        27,
+        25,
+        29,
+        29,
+        33,
+        23,
+        34,
+        30,
+        26,
+        27,
+        23,
+        34,
+        21,
+        28,
+        25,
+        30,
+        41,
+        25,
+        18,
+        34
+      ],
+      "before_pages": [
+        27,
+        25,
+        29
+      ],
+      "after_pages": [
+        27,
+        25,
+        25
+      ],
+      "before_rr": 1.0,
+      "after_rr": 1.0
+    },
+    {
+      "id": "q12",
+      "category": "paraphrase",
+      "question": "Do I get paid out for unused sick days when I quit?",
+      "relevant_pages": [
+        21,
+        25,
+        41
+      ],
+      "candidate_pages": [
+        25,
+        26,
+        25,
+        25,
+        26,
+        34,
+        25,
+        26,
+        26,
+        26,
+        33,
+        24,
+        21,
+        27,
+        41,
+        34,
+        23,
+        29,
+        24,
+        22
+      ],
+      "before_pages": [
+        25,
+        26,
+        25
+      ],
+      "after_pages": [
+        21,
+        41,
+        25
+      ],
+      "before_rr": 1.0,
+      "after_rr": 1.0
+    },
+    {
+      "id": "q13",
+      "category": "paraphrase",
+      "question": "Can I vape on campus?",
+      "relevant_pages": [
+        11,
+        12
+      ],
+      "candidate_pages": [
+        11,
+        12,
+        26,
+        37,
+        13,
+        27,
+        16,
+        40,
+        34,
+        13,
+        12,
+        27,
+        15,
+        16,
+        39,
+        26,
+        26,
+        36,
+        6,
+        22
+      ],
+      "before_pages": [
+        11,
+        12,
+        26
+      ],
+      "after_pages": [
+        39,
+        27,
+        11
+      ],
+      "before_rr": 1.0,
+      "after_rr": 0.3333333333333333
+    },
+    {
+      "id": "q14",
+      "category": "paraphrase",
+      "question": "Can I study at Bennett for free as a staff member?",
+      "relevant_pages": [
+        27
+      ],
+      "candidate_pages": [
+        27,
+        22,
+        23,
+        29,
+        43,
+        2,
+        7,
+        9,
+        3,
+        11,
+        7,
+        28,
+        35,
+        18,
+        11,
+        30,
+        17,
+        17,
+        6,
+        14
+      ],
+      "before_pages": [
+        27,
+        22,
+        23
+      ],
+      "after_pages": [
+        27,
+        17,
+        7
+      ],
+      "before_rr": 1.0,
+      "after_rr": 1.0
+    },
+    {
+      "id": "q15",
+      "category": "paraphrase",
+      "question": "How will I find out if the college is closed because of snow?",
+      "relevant_pages": [
+        33
+      ],
+      "candidate_pages": [
+        33,
+        32,
+        24,
+        34,
+        8,
+        32,
+        27,
+        33,
+        34,
+        9,
+        12,
+        17,
+        18,
+        25,
+        21,
+        40,
+        33,
+        27,
+        26,
+        11
+      ],
+      "before_pages": [
+        33,
+        32,
+        24
+      ],
+      "after_pages": [
+        33,
+        34,
+        32
+      ],
+      "before_rr": 1.0,
+      "after_rr": 1.0
+    },
+    {
+      "id": "q16",
+      "category": "paraphrase",
+      "question": "If the campus shuts down for bad weather, do I still get paid?",
+      "relevant_pages": [
+        34
+      ],
+      "candidate_pages": [
+        34,
+        33,
+        32,
+        34,
+        25,
+        34,
+        24,
+        32,
+        33,
+        21,
+        29,
+        32,
+        40,
+        35,
+        9,
+        25,
+        28,
+        27,
+        28,
+        30
+      ],
+      "before_pages": [
+        34,
+        33,
+        32
+      ],
+      "after_pages": [
+        34,
+        32,
+        32
+      ],
+      "before_rr": 1.0,
+      "after_rr": 1.0
+    },
+    {
+      "id": "q17",
+      "category": "paraphrase",
+      "question": "Will I lose pay if I'm called for jury service?",
+      "relevant_pages": [
+        29
+      ],
+      "candidate_pages": [
+        29,
+        29,
+        32,
+        34,
+        33,
+        34,
+        34,
+        21,
+        31,
+        35,
+        18,
+        25,
+        41,
+        28,
+        30,
+        15,
+        27,
+        9,
+        26,
+        39
+      ],
+      "before_pages": [
+        29,
+        29,
+        32
+      ],
+      "after_pages": [
+        29,
+        29,
+        18
+      ],
+      "before_rr": 1.0,
+      "after_rr": 1.0
+    },
+    {
+      "id": "q18",
+      "category": "paraphrase",
+      "question": "How do I file a complaint about unfair treatment by my boss?",
+      "relevant_pages": [
+        10
+      ],
+      "candidate_pages": [
+        10,
+        10,
+        15,
+        15,
+        38,
+        11,
+        39,
+        10,
+        15,
+        9,
+        13,
+        28,
+        14,
+        38,
+        9,
+        38,
+        39,
+        14,
+        26,
+        18
+      ],
+      "before_pages": [
+        10,
+        10,
+        15
+      ],
+      "after_pages": [
+        10,
+        15,
+        10
+      ],
+      "before_rr": 1.0,
+      "after_rr": 1.0
+    },
+    {
+      "id": "q19",
+      "category": "paraphrase",
+      "question": "Is it okay to date someone I supervise?",
+      "relevant_pages": [
+        13
+      ],
+      "candidate_pages": [
+        13,
+        13,
+        15,
+        14,
+        15,
+        13,
+        12,
+        41,
+        38,
+        39,
+        14,
+        38,
+        31,
+        9,
+        9,
+        39,
+        14,
+        28,
+        9,
+        14
+      ],
+      "before_pages": [
+        13,
+        13,
+        15
+      ],
+      "after_pages": [
+        31,
+        13,
+        39
+      ],
+      "before_rr": 1.0,
+      "after_rr": 0.5
+    },
+    {
+      "id": "q20",
+      "category": "paraphrase",
+      "question": "How long does HR take to investigate a harassment report?",
+      "relevant_pages": [
+        15
+      ],
+      "candidate_pages": [
+        15,
+        15,
+        10,
+        15,
+        10,
+        39,
+        13,
+        14,
+        29,
+        14,
+        38,
+        10,
+        14,
+        14,
+        31,
+        19,
+        14,
+        41,
+        28,
+        21
+      ],
+      "before_pages": [
+        15,
+        15,
+        10
+      ],
+      "after_pages": [
+        15,
+        15,
+        31
+      ],
+      "before_rr": 1.0,
+      "after_rr": 1.0
+    },
+    {
+      "id": "q21",
+      "category": "multi_part",
+      "question": "How much notice do staff need to give when resigning, and how much notice do faculty need to give?",
+      "relevant_pages": [
+        21,
+        41
+      ],
+      "candidate_pages": [
+        21,
+        41,
+        41,
+        24,
+        21,
+        40,
+        23,
+        22,
+        39,
+        26,
+        27,
+        28,
+        6,
+        34,
+        29,
+        2,
+        23,
+        3,
+        38,
+        43
+      ],
+      "before_pages": [
+        21,
+        41,
+        41
+      ],
+      "after_pages": [
+        41,
+        21,
+        21
+      ],
+      "before_rr": 1.0,
+      "after_rr": 1.0
+    },
+    {
+      "id": "q22",
+      "category": "multi_part",
+      "question": "How many sick days do I earn per month, and can I use them for my child's doctor appointments?",
+      "relevant_pages": [
+        25
+      ],
+      "candidate_pages": [
+        25,
+        25,
+        26,
+        26,
+        25,
+        23,
+        27,
+        29,
+        26,
+        24,
+        26,
+        26,
+        34,
+        22,
+        30,
+        25,
+        18,
+        34,
+        30,
+        30
+      ],
+      "before_pages": [
+        25,
+        25,
+        26
+      ],
+      "after_pages": [
+        25,
+        26,
+        25
+      ],
+      "before_rr": 1.0,
+      "after_rr": 1.0
+    },
+    {
+      "id": "q23",
+      "category": "multi_part",
+      "question": "Who is eligible for FMLA leave, and how many weeks can they take?",
+      "relevant_pages": [
+        29
+      ],
+      "candidate_pages": [
+        29,
+        30,
+        29,
+        30,
+        30,
+        27,
+        24,
+        25,
+        26,
+        27,
+        26,
+        24,
+        23,
+        21,
+        28,
+        22,
+        18,
+        25,
+        26,
+        26
+      ],
+      "before_pages": [
+        29,
+        30,
+        29
+      ],
+      "after_pages": [
+        30,
+        30,
+        29
+      ],
+      "before_rr": 1.0,
+      "after_rr": 0.3333333333333333
+    },
+    {
+      "id": "q24",
+      "category": "multi_part",
+      "question": "How much bereavement leave do I get for a parent, and how much for an aunt?",
+      "relevant_pages": [
+        27
+      ],
+      "candidate_pages": [
+        27,
+        29,
+        29,
+        30,
+        21,
+        34,
+        30,
+        30,
+        26,
+        27,
+        23,
+        33,
+        34,
+        26,
+        29,
+        41,
+        25,
+        24,
+        28,
+        26
+      ],
+      "before_pages": [
+        27,
+        29,
+        29
+      ],
+      "after_pages": [
+        27,
+        27,
+        30
+      ],
+      "before_rr": 1.0,
+      "after_rr": 1.0
+    },
+    {
+      "id": "q25",
+      "category": "multi_part",
+      "question": "How much annual leave does a first-year employee earn, and what is the maximum leave anyone can carry?",
+      "relevant_pages": [
+        23,
+        24
+      ],
+      "candidate_pages": [
+        23,
+        24,
+        23,
+        23,
+        24,
+        24,
+        29,
+        18,
+        21,
+        25,
+        25,
+        28,
+        26,
+        34,
+        27,
+        41,
+        26,
+        22,
+        28,
+        30
+      ],
+      "before_pages": [
+        23,
+        24,
+        23
+      ],
+      "after_pages": [
+        24,
+        23,
+        23
+      ],
+      "before_rr": 1.0,
+      "after_rr": 1.0
+    }
+  ]
+}

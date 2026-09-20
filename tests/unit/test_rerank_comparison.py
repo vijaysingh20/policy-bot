@@ -14,6 +14,10 @@ from backend.evaluation.rerank_comparison import (
 )
 from backend.retrieval.vector_index import build_faiss_index
 from backend.schemas import ChunkRecord, PageMetaData
+from backend.config import PROJECT_ROOT
+
+GOLDEN_SET = PROJECT_ROOT / "eval" / "golden_set.jsonl"
+GOLDEN_SETS = sorted(GOLDEN_SET.parent.glob("golden_set*.jsonl"))
 
 
 class LeaveObsessedEncoder:
@@ -96,12 +100,23 @@ def test_markdown_report_lists_all_last_and_shows_changed_questions():
     assert lines[-1].startswith("| q |")                   # the one question that changed
 
 
-def test_golden_set_is_well_formed():
-    items = load_golden_set()
+@pytest.mark.parametrize("path", GOLDEN_SETS, ids=lambda p: p.name)
+def test_golden_sets_are_well_formed(path):
+    items = load_golden_set(path)
     assert len({item["id"] for item in items}) == len(items)
     for item in items:
         assert item["question"].strip()
         assert item["expected_route"] in {"single", "decompose", "out_of_scope"}
         has_pages = bool(item["relevant_pages"])
         assert has_pages == (item["category"] not in {"out_of_scope", "not_in_document"}), item["id"]
-        assert all(isinstance(p, int) and 1 <= p <= 43 for p in item["relevant_pages"])
+        assert all(isinstance(p, int) and p >= 1 for p in item["relevant_pages"])
+
+
+@pytest.mark.parametrize("model_name, expected", [
+    ("cross-encoder/ms-marco-MiniLM-L6-v2", "ms-marco-MiniLM-L6-v2"),
+    ("BAAI/bge-reranker-base", "bge-reranker-base"),
+    ("local-model", "local-model"),
+])
+def test_result_file_name_comes_from_model_name(model_name, expected):
+    from backend.evaluation.rerank_comparison import slug
+    assert slug(model_name) == expected

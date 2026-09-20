@@ -1,3 +1,5 @@
+Re-ranker: `cross-encoder/ms-marco-MiniLM-L6-v2`
+
 | Category | Questions | Hit@3 before | Hit@3 after | MRR@3 before | MRR@3 after | Recall@20 (pool) |
 |---|---|---|---|---|---|---|
 | multi_part | 5 | 1.00 | 1.00 | 1.00 | 0.87 | 1.00 |

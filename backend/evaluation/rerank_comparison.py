@@ -155,36 +155,59 @@ def explain(question: str, top_k: int = FINAL_TOP_K) -> None:
                               r.candidate.chunk.text) for r in reranked])
 
 
+def slug(model_name: str) -> str:
+    """'BAAI/bge-reranker-base' -> 'bge-reranker-base' (safe for file names)."""
+    return model_name.rsplit("/", 1)[-1]
+
+
 def main() -> None:
+    import argparse
+
+    from backend.config import RERANKER_MODEL
     from backend.embedding import load_model_for_query
     from backend.ingestion.pipeline import build_index
     from backend.retrieval import load_reranker, load_retrieval_assets
 
-    if not (INDEX_DIR / "manifest.json").exists():
-        print(f"No index at {INDEX_DIR}; building it from {HANDBOOK_PDF} ...")
-        build_index(HANDBOOK_PDF, INDEX_DIR)
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--reranker", default=RERANKER_MODEL,
+                        help="Hugging Face cross-encoder to evaluate (default: the app's)")
+    parser.add_argument("--pdf", type=Path, default=HANDBOOK_PDF,
+                        help="PDF to evaluate on (default: the Bennett handbook)")
+    parser.add_argument("--golden", type=Path, default=GOLDEN_SET,
+                        help="golden-set JSONL written for that PDF")
+    args = parser.parse_args()
 
-    index, chunks, manifest = load_retrieval_assets(INDEX_DIR)
+    # One index per evaluated PDF, so documents never overwrite each other's index
+    index_dir = INDEX_DIR if args.pdf == HANDBOOK_PDF else INDEX_DIR.parent / f"eval-{args.pdf.stem}"
+    if not (index_dir / "manifest.json").exists():
+        print(f"No index at {index_dir}; building it from {args.pdf} ...")
+        build_index(args.pdf, index_dir)
+
+    index, chunks, manifest = load_retrieval_assets(index_dir)
     embedding_model = load_model_for_query(manifest)
-    reranker = load_reranker()
+    reranker = load_reranker(args.reranker)
 
-    answerable = [item for item in load_golden_set() if item["relevant_pages"]]
+    answerable = [item for item in load_golden_set(args.golden) if item["relevant_pages"]]
     results = [
         evaluate_question(item, index=index, chunks=chunks,
                           embedding_model=embedding_model, reranker=reranker)
         for item in answerable
     ]
     summary = summarize(results)
-    report = render_markdown(summary, results, FINAL_TOP_K, CANDIDATE_TOP_K)
+    report = f"Document: `{args.pdf.name}`  \nRe-ranker: `{args.reranker}`\n\n" + render_markdown(
+        summary, results, FINAL_TOP_K, CANDIDATE_TOP_K
+    )
 
     RESULTS_DIR.mkdir(parents=True, exist_ok=True)
-    (RESULTS_DIR / "rerank_comparison.md").write_text(report, encoding="utf-8")
-    (RESULTS_DIR / "rerank_comparison.json").write_text(
-        json.dumps({"summary": summary, "questions": [asdict(r) for r in results]}, indent=2),
+    name = f"rerank_comparison_{args.pdf.stem}_{slug(args.reranker)}"
+    (RESULTS_DIR / f"{name}.md").write_text(report, encoding="utf-8")
+    (RESULTS_DIR / f"{name}.json").write_text(
+        json.dumps({"document": args.pdf.name, "reranker": args.reranker, "summary": summary,
+                    "questions": [asdict(r) for r in results]}, indent=2),
         encoding="utf-8",
     )
     print(report)
-    print(f"Saved to {RESULTS_DIR}")
+    print(f"Saved to {RESULTS_DIR / name}.md")
 
 
 if __name__ == "__main__":

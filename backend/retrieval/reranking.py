@@ -3,9 +3,9 @@ from sentence_transformers import CrossEncoder
 from backend.config import DEVICE, RERANKER_MODEL
 from backend.schemas import RerankedResult, SearchRequest, SearchResult
 
-def load_reranker() -> CrossEncoder:
+def load_reranker(model_name: str = RERANKER_MODEL) -> CrossEncoder:
     return CrossEncoder(
-        RERANKER_MODEL,
+        model_name,
         device=DEVICE,
     )
 
