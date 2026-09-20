@@ -1,3 +1,13 @@
+---
+title: HR Policy Bot
+emoji: 📘
+colorFrom: indigo
+colorTo: blue
+sdk: docker
+app_port: 7860
+pinned: false
+---
+
 # HR Policy Bot
 
 An HR handbook question-answering application built with Retrieval-Augmented Generation (RAG).
