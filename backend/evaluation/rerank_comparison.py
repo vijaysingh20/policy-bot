@@ -131,6 +131,30 @@ def render_markdown(summary: dict, results: list[QuestionResult], top_k: int, po
     return "\n".join(lines) + "\n"
 
 
+def explain(question: str, top_k: int = FINAL_TOP_K) -> None:
+    """Error analysis: print what FAISS and the re-ranker each put on top, with text."""
+    from backend.embedding import load_model_for_query
+    from backend.retrieval import load_reranker, load_retrieval_assets
+
+    index, chunks, manifest = load_retrieval_assets(INDEX_DIR)
+    model = load_model_for_query(manifest)
+    candidates = search_faiss(SearchRequest(query=question, top_k=CANDIDATE_TOP_K),
+                              index, chunks, model)
+    reranked = rerank_candidate(SearchRequest(query=question, top_k=top_k),
+                                candidates, load_reranker())
+
+    def show(title, rows):
+        print(f"\n=== {title} ===")
+        for rank, (page, score, text) in enumerate(rows, start=1):
+            snippet = " ".join(text.split())[:160]
+            print(f"{rank}. page {page:>2}  score {score:7.3f}  {snippet}")
+
+    show("FAISS top-k", [(c.chunk.metadata.page_number, c.score, c.chunk.text)
+                         for c in candidates[:top_k]])
+    show("Re-ranked top-k", [(r.candidate.chunk.metadata.page_number, r.rerank_score,
+                              r.candidate.chunk.text) for r in reranked])
+
+
 def main() -> None:
     from backend.embedding import load_model_for_query
     from backend.ingestion.pipeline import build_index
