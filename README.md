@@ -8,370 +8,262 @@ app_port: 7860
 pinned: false
 ---
 
-# HR Policy Bot
+## Live Demo
 
-An HR handbook question-answering application built with Retrieval-Augmented Generation (RAG).
+- **App:** [https://YOUR-VERCEL-URL.vercel.app](https://YOUR-VERCEL-URL.vercel.app)
+- **API:** https://vijaysinghdev-policy-bot.hf.space (interactive docs at `/docs`)
+- **Repo:** https://github.com/vijaysingh20/policy-bot
 
-Users upload a PDF, prepare its search index, and ask questions about its contents. Answers include citations and expandable source excerpts. Evaluation runs in the background so users can read the answer while quality scores are being calculated.
+## Overview
 
-## Features
+A single-source RAG assistant for employee handbooks. A user uploads one HR
+policy PDF, asks questions in plain English, and gets an answer grounded in
+that document with page-cited source chunks. Multi-part questions are
+automatically decomposed into sub-queries; questions outside the document's
+scope are declined rather than answered from the model's general knowledge.
 
-- PDF upload with a configurable size limit, currently 10 MiB.
-- PDF inspection using `pypdf`, including page counting and rejection of encrypted PDFs.
-- UUID-based document storage with original filenames preserved for citations.
-- Document metadata and evaluation states stored in SQLite.
-- Text normalization and token-aware recursive chunking.
-- Local embeddings and a separate FAISS index for each uploaded document.
-- Query routing for single, multipart, and out-of-scope questions.
-- Cross-encoder re-ranking of retrieved candidates.
-- Structured answer generation through a LangChain LCEL chain.
-- Citation ID validation and source resolution.
-- Background RAGAS evaluation with frontend polling.
-- LangSmith tracing and evaluation feedback.
-- Detailed evaluation records in JSONL.
-- A Next.js interface with a dark theme.
+## Overview
 
-## Technology
+A single-source RAG assistant for employee handbooks. A user uploads one HR
+policy PDF, asks questions in plain English, and gets an answer grounded in
+that document with page-cited source chunks. Multi-part questions are
+automatically decomposed into sub-queries; questions outside the document's
+scope are declined rather than answered from the model's general knowledge.
 
-| Component | Technology |
+Architecturally equivalent to the class reference build — embeddings →
+FAISS retrieval → LCEL RAG chain → cross-encoder re-ranking → RAGAS
+evaluation — applied to a different domain and document type (HR Policy
+Bot, option 6 from the assignment brief).
+
+## Architecture
+
+\`\`\`mermaid
+flowchart LR
+    subgraph Ingestion
+        A[PDF Upload] --> B[Load pages<br/>skip table-of-contents]
+        B --> C[Chunk<br/>200 tokens, 40 overlap]
+        C --> D[Embed<br/>all-MiniLM-L6-v2]
+        D --> E[(FAISS index)]
+    end
+
+    subgraph "Query time"
+        F[Question] --> G[LCEL Query Planner<br/>single / decompose / out_of_scope]
+        G -->|out_of_scope| H[Decline, no retrieval]
+        G -->|single or decompose| I[FAISS search<br/>top 20 candidates]
+        E --> I
+        I --> J[Cross-encoder re-rank<br/>ms-marco-MiniLM-L6-v2<br/>top 3]
+        J --> K[LCEL Answer Chain<br/>gpt-4.1-mini]
+        K --> L[Citation sanitizer<br/>drop unknown S# refs]
+        L --> M[Answer + cited sources]
+    end
+
+    subgraph "Background evaluation"
+        M -.-> N[RAGAS: faithfulness,<br/>answer relevancy,<br/>context precision]
+        N --> O[(JSONL log)]
+        N --> P[(SQLite evaluation state<br/>polled by frontend)]
+    end
+\`\`\`
+
+## Tech stack
+
+| Layer | Choice |
 |---|---|
-| Backend | Python, FastAPI |
-| Data validation | Pydantic |
-| Python environment | uv |
-| Frontend | Next.js, React, TypeScript |
-| PDF extraction | pypdf |
-| Chunking | LangChain text splitters |
-| Embeddings | Sentence Transformers |
-| Vector search | FAISS |
-| Re-ranking | Sentence Transformers CrossEncoder |
-| Planning and generation | OpenAI through LangChain |
-| Evaluation | RAGAS |
-| Observability | LangSmith |
-| Metadata and evaluation state | SQLite |
+| Frontend | Next.js, TypeScript, Tailwind |
+| Backend | FastAPI, Python 3.12, `uv` |
+| Orchestration | LangChain (LCEL) |
+| Embeddings | `sentence-transformers/all-MiniLM-L6-v2` (local, CPU) |
+| Vector store | FAISS (cosine similarity) |
+| Re-ranking | `cross-encoder/ms-marco-MiniLM-L6-v2` (local, CPU) |
+| Generation & planning | OpenAI `gpt-4.1-mini` |
+| Evaluation | RAGAS (faithfulness, answer relevancy, context precision) |
+| Evaluation state | SQLite (polled by the frontend while RAGAS runs in the background) |
+| Observability | LangSmith (optional — tracing is a no-op if `LANGSMITH_TRACING` is unset) |
+| Backend hosting | Hugging Face Spaces (Docker) |
+| Frontend hosting | Vercel |
 
-Current models:
+## Setup
 
-- Embeddings: `sentence-transformers/all-MiniLM-L6-v2`
-- Re-ranking: `cross-encoder/ms-marco-MiniLM-L6-v2`
-- Query planning, answer generation, and evaluation: `gpt-4.1-mini`
-
-Embedding model revisions are recorded in each index manifest. Query embeddings must use a compatible model and revision; matching vector dimensions alone is insufficient.
-
-## How it works
-
-### Document preparation
-
-1. The browser uploads a PDF using `multipart/form-data`.
-2. FastAPI checks the file size and opens it with `pypdf`.
-3. The PDF is saved under a generated document ID.
-4. Its original filename, page count, size, and status are stored in SQLite.
-5. Ingestion extracts page text and preserves source metadata.
-6. Text is normalized, split into chunks, and checked against the embedding model’s token limit.
-7. Embeddings, a FAISS index, chunk records, and a manifest are saved.
-8. The saved retrieval assets are loaded and validated before the document is marked `ready`.
-
-### Question answering
-
-```mermaid
-flowchart TD
-    Q["Question and document ID"] --> P["Query planner"]
-    P --> O["Out of scope: scope response"]
-    P --> R["Retrieve and re-rank each retrieval question"]
-    R --> C["Merge unique chunks and build cited context"]
-    C --> A["Generate answer and validate citation IDs"]
-    A --> U["Return answer, sources, and evaluation ID"]
-    U --> E["Background evaluation"]
-    E --> S["Save scores and evaluation state"]
-    S --> F["Frontend polls for results"]
-```
-
-For each retrieval question, the current workflow retrieves up to 20 candidates and keeps up to 3 after re-ranking. Results from decomposed questions are merged and deduplicated before generation.
-
-### Retrieval and citations
-
-FAISS uses `IndexFlatIP` with L2-normalized vectors, making inner-product scores equivalent to cosine similarity.
-
-Each chunk retains:
-
-- Original source filename.
-- One-based PDF page number.
-- Chunk number within that page.
-- Extracted text.
-
-Citation IDs such as `[S1]` are assigned to the context for an individual question. They are not permanent document identifiers.
-
-Citation validation checks that referenced IDs exist and that inline citations agree with the structured source list. It does not independently prove that every cited passage supports its associated claim.
-
-## Local setup
-
-### Prerequisites
-
-- Python compatible with `pyproject.toml`.
-- uv.
-- Node.js compatible with the installed Next.js version, and npm.
-- An OpenAI API key with available API credit.
-- A LangSmith account and API key to use tracing and feedback.
-
-Run backend commands from the project root.
-
-### 1. Install Python dependencies
-
-```bash
+\`\`\`bash
 uv sync
-```
+cp .env.example .env   # add OPENAI_API_KEY
 
-Use the repository’s dependency declarations and lockfile to reproduce its environment.
+uv run uvicorn backend.api:app --reload      # backend on :8000
+cd frontend && npm install && npm run dev    # frontend on :3000
+\`\`\`
 
-### 2. Configure environment variables
+Set `NEXT_PUBLIC_API_URL=http://127.0.0.1:8000` in `frontend/.env.local` for
+local development. The app is upload-driven — no PDF ships with the repo.
 
-Create `.env` in the project root:
+## API reference
 
-```dotenv
-OPENAI_API_KEY=your_openai_api_key
-
-LANGSMITH_TRACING=true
-LANGSMITH_API_KEY=your_langsmith_api_key
-LANGSMITH_PROJECT=policypal-dev
-```
-
-Optionally add a Hugging Face token:
-
-```dotenv
-HF_TOKEN=your_huggingface_token
-```
-
-Without LangSmith credentials, set `LANGSMITH_TRACING=false`.
-
-Keep `.env` and API keys out of version control and frontend code.
-
-### 3. Prepare the default handbook index
-
-The current API startup loads a default index from `INDEX_DIR`. It must exist before the server starts, even though the application also supports uploaded documents.
-
-Check these settings in `backend/config.py`:
-
-- `HANDBOOK_PDF`
-- `INDEX_DIR`
-- `UPLOAD_DIR`
-- `DATABASE_DIR`
-- `CHUNK_SIZE`
-- `CHUNK_OVERLAP`
-- `MAX_UPLOAD_BYTES`
-
-Place the initial handbook at `HANDBOOK_PDF`, then run:
-
-```bash
-uv run --env-file .env python -c "from backend.ingestion import build_index; build_index()"
-```
-
-Skip this step when valid default retrieval assets already exist.
-
-The model loader may download model files from Hugging Face. Embedding computation runs locally.
-
-### 4. Start FastAPI
-
-If the API module is `backend/api.py`:
-
-```bash
-uv run --env-file .env uvicorn backend.api:app --reload
-```
-
-Adjust the module path if `api.py` is located elsewhere in your checkout.
-
-Open:
-
-- Health endpoint: http://127.0.0.1:8000/health
-- Interactive API documentation: http://127.0.0.1:8000/docs
-
-### 5. Start Next.js
-
-In another terminal:
-
-```bash
-cd frontend
-npm install
-npm run dev
-```
-
-Open the URL printed by Next.js, normally:
-
-http://localhost:3000
-
-The current frontend calls `http://127.0.0.1:8000` directly. FastAPI allows the local frontend origins on port 3000. Update those addresses and CORS settings when deploying.
-
-## Using the application
-
-1. Select an HR-policy PDF.
-2. Click **Upload and prepare**.
-3. Wait until the document is shown as ready.
-4. Enter a question and click **Ask**.
-5. Read the answer and expand its source excerpts.
-6. Wait for background evaluation scores to appear.
-
-Example question:
-
-> How can an employee review their personnel record, and what is the annual leave policy?
-
-The interface requires a prepared document. The backend retains a default-handbook fallback for API requests that omit `document_id`.
-
-## API endpoints
-
-| Method | Endpoint | Purpose |
+| Method | Path | Purpose |
 |---|---|---|
-| GET | `/health` | Check that the API responds |
-| POST | `/documents` | Upload and register a PDF |
-| POST | `/documents/{document_id}/ingest` | Build or validate retrieval assets and mark the document ready |
-| POST | `/questions` | Generate an answer using the selected document |
-| GET | `/evaluations/{evaluation_id}` | Read evaluation status and scores |
+| `GET` | `/health` | Liveness check |
+| `POST` | `/documents` | Upload a PDF, validated (size, encryption, page count) |
+| `POST` | `/documents/{document_id}/ingest` | Build the FAISS index for an uploaded document |
+| `POST` | `/questions` | Ask a question; optional `document_id` (defaults to the loaded handbook if any) |
+| `GET` | `/evaluations/{evaluation_id}` | Poll for the background RAGAS result |
 
-### Upload a document
+Full interactive schema at `/docs` on the live API.
 
-Send `multipart/form-data` with a file field named `file`.
+## Retrieval & re-ranking evaluation
 
-A successful upload returns HTTP 201:
+Evaluated with a 29-question golden set per document (`eval/golden_set.jsonl`,
+`eval/golden_set_mississippi.jsonl`), each labeled with its expected route
+and the PDF page(s) that answer it. `simple` questions use the handbook's
+own wording; `paraphrase` questions deliberately use different words;
+`multi_part` questions require decomposition; `not_in_document` and
+`out_of_scope` check that the system declines rather than invents an answer.
 
-```json
-{
-  "filename": "handbook.pdf",
-  "content_type": "application/pdf",
-  "page_count": 43,
-  "document_id": "9bc39ef3-50c3-49a2-b5c0-2154553bc93d",
-  "size_bytes": 630797,
-  "status": "uploaded"
-}
-```
+For every answerable question, FAISS retrieves one shared pool of 20
+candidates. "Before" keeps FAISS's own top 3; "after" lets the cross-encoder
+re-rank the *same* pool down to 3 — isolating the re-ranker's effect from
+retrieval itself. Metrics: Hit@3 (is a correct page in the top 3?) and
+MRR@3 (how high does the first correct page rank?).
 
-Call the ingestion endpoint for that ID before asking questions.
+Reproduce with:
 
-### Ask a question
+\`\`\`bash
+uv run python -m backend.evaluation.rerank_comparison
+uv run python -m backend.evaluation.rerank_comparison --pdf data/mississippi-handbook.pdf --golden eval/golden_set_mississippi.jsonl
+\`\`\`
 
-```json
-{
-  "question": "How can an employee review their personnel record?",
-  "document_id": "9bc39ef3-50c3-49a2-b5c0-2154553bc93d"
-}
-```
+### Bennett College handbook (43 pages)
 
-The response includes:
+First pass showed re-ranking *hurting* retrieval:
 
-- `answer`
-- `sources`
-- `evaluation_id`
-- `evaluation_status`
-- `scores`
-- `trace_id`
+| | Hit@3 | MRR@3 |
+|---|---|---|
+| FAISS only | 1.00 | 0.98 |
+| + re-ranker (before fix) | 0.96 | 0.80 |
 
-For an answer awaiting evaluation, `evaluation_status` is `pending` and `scores` is `null`. Poll the evaluation endpoint for updates.
+Error analysis traced this to table-of-contents pages: a TOC line like
+`3.7 BEREAVEMENT LEAVE ... 26` is, to a cross-encoder reading question and
+passage together, a near-perfect topical match — despite containing no
+answer. A bi-encoder actually protects against this by accident, since a
+TOC chunk's blended, multi-topic embedding scores low on similarity; the
+cross-encoder has no such protection.
 
-### Evaluation states
+**Fix:** detect and skip table-of-contents pages at load time
+(`is_table_of_contents` in `backend/ingestion/pdf_loader.py`) — a page
+where most lines end in dot-leaders + a page number.
 
-| Status | Meaning |
-|---|---|
-| `pending` | Evaluation has not finished |
-| `completed` | All three scores are available |
-| `skipped` | Evaluation was not applicable |
-| `failed` | Evaluation could not complete |
+| | Hit@3 | MRR@3 |
+|---|---|---|
+| FAISS only | 1.00 | 0.98 |
+| + re-ranker (after fix) | 1.00 | 0.84 |
 
-Skipped and failed states include a reason and no scores. An evaluation failure does not remove the generated answer.
+Re-ranking still trails FAISS alone. With FAISS already near-perfect on
+this document, there's almost no room for the re-ranker to help and every
+mistake it makes shows up as a net loss. We then compared re-ranker models
+directly:
 
-## Evaluation and observability
+| Re-ranker | Hit@3 | MRR@3 |
+|---|---|---|
+| FAISS only | 1.00 | 0.98 |
+| `ms-marco-MiniLM-L6-v2` (current) | 1.00 | 0.84 |
+| `BAAI/bge-reranker-base` (12× larger) | 1.00 | 0.89 |
 
-| Metric | What it measures |
-|---|---|
-| Faithfulness | Support for answer claims in the retrieved context |
-| Answer relevancy | How closely the answer addresses the question |
-| Context precision | Whether useful contexts occur early in the supplied ordering |
+**Decision rule, set before running the comparison:** switch models only if
+one beats the FAISS baseline by ≥0.05 MRR. Neither does — `bge-reranker-base`
+is better than the smaller model but still loses to no re-ranking at all —
+so we kept `ms-marco-MiniLM-L6-v2`, the smallest and fastest option.
 
-Context precision uses `ContextPrecisionWithoutReference` with the customized prompt version `useful_context_v1`. The prompt allows a chunk to contribute evidence for part of a multipart answer; a chunk does not need to support the entire answer.
+### Mississippi State Employee Handbook (63 pages, second document)
 
-These are model-assisted judgments. A score of `1.0` is not a guarantee of correctness, completeness, or citation accuracy. Results from the customized context-precision prompt should be identified separately from results using the default prompt.
+Chosen specifically because it has ten near-duplicate leave-type sections
+in one chapter — the condition under which re-ranking should matter most.
+`is_table_of_contents` was validated against a different layout here too:
+it correctly flagged all 4 real TOC pages with zero false positives.
 
-The application records results in three places for different purposes:
+| Category | FAISS MRR | + `ms-marco-MiniLM-L6-v2` |
+|---|---|---|
+| simple | 0.69 | **0.92** (+0.23) |
+| paraphrase | 0.79 | 0.69 (−0.10) |
+| multi_part | 1.00 | 0.90 (−0.10) |
+| **all** | **0.80** | 0.81 (+0.01) |
 
-- **SQLite:** evaluation state lookup for frontend polling.
-- **JSONL:** detailed question, answer, context, score, and evaluator records.
-- **LangSmith:** traces, timing information, and evaluation feedback.
+The baseline is much weaker here than on Bennett (0.80 vs 0.98 MRR),
+confirming that documents with more topically-similar sections give a
+bi-encoder less to work with. The re-ranker rescued several exact-wording
+questions FAISS missed entirely (e.g. resignation notice: miss → rank 1),
+but lost several paraphrased questions it previously got right, by
+rewarding surface word overlap over meaning. The two effects roughly
+cancel (net +0.01), below the 0.05 bar, so `ms-marco-MiniLM-L6-v2` was
+kept unchanged. `bge-reranker-base` was also tested here and performed
+worse (0.69 MRR) — the larger model that won on Bennett is not universally
+better.
 
-LangSmith token and cost totals cover instrumented calls. They should not be assumed to include every evaluator call.
+**Conclusion:** re-ranking's value is document-dependent. It helps most
+when the bi-encoder baseline is weak (many similar sections) and on
+exact-wording questions; it can hurt when the corpus has noisy
+high-word-overlap-but-wrong-topic chunks (table of contents) or when
+questions are heavily paraphrased. Full results and the underlying
+per-question predictions are in `eval/results/`.
 
-## Storage
+## RAGAS evaluation
 
-Paths are configured in `backend/config.py`.
+Every answered question is scored in the background
+(`backend/evaluation/rerank_comparison.py` handles retrieval eval;
+`backend/evaluation/scoring.py` handles per-answer RAGAS) on three metrics,
+logged to `logs/evaluations.jsonl`, and polled by the frontend via
+`GET /evaluations/{id}` until complete.
 
-| Location | Contents |
-|---|---|
-| `UPLOAD_DIR/{document_id}.pdf` | Original uploaded PDF |
-| `INDEX_DIR` | Default handbook retrieval assets |
-| `INDEX_DIR.parent/{document_id}/` | Uploaded document retrieval assets |
-| `DATABASE_DIR/evaluations.sqlite3` | Document records and evaluation states |
-| `backend/logs/evaluations.jsonl` | Detailed evaluation records in the current helper implementation |
+Sample entries from a local run (trimmed for readability):
 
-Each index directory contains:
+| Question | Faithfulness | Answer Relevancy | Context Precision |
+|---|---|---|---|
+| "Can I vape on campus?" | 1.00 | 0.84 | 0.83 |
+| "Notice period for staff vs. faculty?" (decomposed) | 1.00 | 0.82 | 0.83 |
+| "403(b) match percentage?" *(not in document)* | 0.50 | 0.00 | 0.00 |
+| "How long is the probation period?" | 1.00 | 0.89 | 1.00 |
 
-- `index.faiss`
-- `chunks.jsonl`
-- `manifest.json`
+**On the 403(b) row:** the bot correctly declined to answer rather than
+inventing a percentage — the desired behavior. The near-zero scores are a
+known characteristic of RAGAS, not a failure of the app: answer relevancy
+works by generating hypothetical questions from the *answer* and comparing
+them to the real question, so a refusal ("I couldn't find enough
+information...") generates hypothetical questions resembling nothing,
+scoring near 0 almost by construction. Context precision correctly reports
+that nothing retrieved was useful — because for this question, nothing in
+the document is. Both retrieved near-empty header-only pages (3 and 43),
+the same boilerplate-only pages identified during PDF loading.
 
-The index depends on chunk ordering and the embedding configuration in its manifest. Keep these files together.
+Scores are intentionally not uniform. On this run, faithfulness averaged
+0.875, answer relevancy 0.64, and context precision 0.67 across 4
+completed evaluations — variation that reflects genuine differences in
+question difficulty rather than a rubber-stamped metric.
 
-Documents are cached in memory when first queried. Cached resources are process-local and are reloaded after a restart.
+**Limitation:** the evaluator LLM is the same model family as the
+generator (`gpt-4.1-mini`), a known source of self-evaluation bias worth
+noting for anyone extending this evaluation.
 
-### Inspect a document record
+## Testing
 
-If `backend/inspect_document_store.py` is included in the checkout:
+105 tests across three layers, run with \`uv run pytest\`:
 
-```bash
-uv run -m backend.inspect_document_store YOUR_DOCUMENT_UUID
-```
+- **Unit** — schema validation, citation sanitization, chunking, the
+  evaluation state machine. Fast, deterministic, no models loaded.
+- **Fake-model** — retrieval and re-ranking logic tested against a real
+  FAISS index with deterministic fake encoders (`tests/unit/test_retrieval.py`),
+  and the full `run_question` flow with a faked LLM chain
+  (`tests/unit/test_query.py`) — including a regression test for a bug
+  where `build_context()` was called with no arguments, caught by writing
+  the first test that actually exercised the in-scope answer path.
+- **API** — FastAPI's `TestClient` against the real app with models
+  monkeypatched, including CORS preflight behavior.
 
-The script opens the database read-only and validates the stored metadata with Pydantic.
+RAGAS/LLM-scored evaluation and the re-ranking comparison are excluded from
+the default run (`-m "not slow and not eval"`) since they cost money and
+call external services; run explicitly with \`uv run pytest -m eval\`.
 
-## Validation status
+## Deployment
 
-The following workflows have been manually exercised during development:
-
-- PDF inspection, upload, and document registration.
-- Extraction with original filenames preserved.
-- Building and loading per-document retrieval assets.
-- Question answering with citations.
-- Query decomposition and re-ranking.
-- Background evaluation and status polling.
-- Browser upload, preparation, and question answering.
-
-A development run on the 43-page Bennett College handbook produced:
-
-| Property | Observed value |
-|---|---|
-| Chunks | 152 |
-| Embedding dimensions | 384 |
-| Largest final chunk | 202 tokens |
-| Oversized final chunks | 0 |
-
-These are pipeline observations, not a general quality benchmark.
-
-Pending validation includes:
-
-- Isolation between two documents containing different policy facts.
-- Representative supported, unsupported, and multipart questions.
-- Manual checks of claim support and citation accuracy.
-- Before/after re-ranking comparison.
-- Failure and restart behavior.
-- Hosted end-to-end verification.
-
-## Current limitations
-
-- Deployment is not yet complete.
-- Encrypted PDFs are rejected.
-- OCR is not implemented; image-only PDFs may not yield usable text.
-- Extraction can imperfectly preserve tables, spacing, and reading order.
-- Chunks are created per page; overlap does not cross page boundaries.
-- New-document ingestion runs during the HTTP request.
-- Background evaluation runs inside the API process and is not a durable job queue.
-- Interrupted evaluations can remain pending; restart recovery is pending.
-- Frontend requests do not yet have explicit timeouts.
-- Retrying failed preparation through the current UI creates another upload.
-- Runtime validation of frontend JSON responses is partial.
-- Document resource caches have no eviction policy.
-- UUID document IDs do not provide authorization or user isolation.
-- File-size checking occurs after multipart reception; hosting-level request limits remain to be configured.
-- Existing incomplete index directories require repair before ingestion can proceed.
+- Backend: Docker image on Hugging Face Spaces (CPU Basic). Both models are
+  baked into the image at build time, so cold starts don't require a
+  download. PyTorch is pinned to the CPU-only wheel index to keep the
+  image small.
+- Frontend: Next.js on Vercel, `NEXT_PUBLIC_API_URL` pointed at the Space.
+- **Storage is ephemeral.** Uploaded PDFs, the SQLite evaluation state, and
+  the JSONL log do not persist across a Space restart — acceptable for a
+  demo, called out here so it isn't mistaken for a bug.
