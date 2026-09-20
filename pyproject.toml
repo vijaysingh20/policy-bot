@@ -20,6 +20,7 @@ dependencies = [
     "python-multipart>=0.0.32",
     "ragas==0.4.3",
     "sentence-transformers>=6.0.1",
+    "torch>=2.14.0",
     "uvicorn[standard]>=0.52.4",
 ]
 
@@ -38,3 +39,11 @@ markers = [
     "eval: calls the LLM / RAGAS (costs money)",
 ]
 addopts = "-m 'not slow and not eval'"
+
+[[tool.uv.index]]
+name = "pytorch-cpu"
+url = "https://download.pytorch.org/whl/cpu"
+explicit = true
+
+[tool.uv.sources]
+torch = [{ index = "pytorch-cpu", marker = "sys_platform == 'linux'" }]

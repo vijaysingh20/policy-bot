@@ -62,7 +62,9 @@ def build_index(
     output_dir: Path = INDEX_DIR,
     model_name: str = EMBEDDING_MODEL,
     *,
-    source_name: str | None = None
+    source_name: str | None = None,
+    model: SentenceTransformer | None = None,
+    model_revision: str | None = None,
 ) -> tuple[
     faiss.Index,
     list[EmbeddedChunk],
@@ -70,7 +72,10 @@ def build_index(
     SentenceTransformer,
 ]:
     """Load the PDF, chunk it, embed it, and persist the retrieval assets."""
-    model, model_revision = load_model_for_ingestion(model_name)
+
+    if model is None or model_revision is None:
+        model, model_revision = load_model_for_ingestion(model_name)
+        
     splitter = build_token_splitter(model)
 
     pages = load_pdf_pages(pdf_path, source_name=source_name)

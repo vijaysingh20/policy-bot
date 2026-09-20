@@ -11,7 +11,7 @@ from backend.schemas import HealthResponse
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 
-from backend.config import DATABASE_DIR, EMBEDDING_MODEL, INDEX_DIR, MAX_UPLOAD_BYTES, UPLOAD_DIR
+from backend.config import CORS_ORIGINS, DATABASE_DIR, EMBEDDING_MODEL, INDEX_DIR, MAX_UPLOAD_BYTES, UPLOAD_DIR
 from backend.embedding import load_model_for_ingestion
 from backend.retrieval import DocumentResources, load_document_resources, load_reranker, load_retrieval_assets
 from backend.schemas import QuestionResponse, QuestionRequest, EvaluationState, DocumentUploadResponse
@@ -61,10 +61,7 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:3000",
-        "http://127.0.0.1:3000",
-    ],
+    allow_origins=CORS_ORIGINS,
     allow_methods=["GET", "POST"],
     allow_headers=["Content-Type"]
 )
@@ -264,7 +261,9 @@ def ingest_document(
         build_index(
             pdf_path=pdf_path,
             output_dir=assets_dir,
-            source_name=document.filename or "document.pdf"
+            source_name=document.filename or "document.pdf",
+            model=request.app.state.embedding_model,
+            model_revision=request.app.state.embedding_revision,
         )
 
     try:
