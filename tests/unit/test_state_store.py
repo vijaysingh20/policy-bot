@@ -51,3 +51,8 @@ def test_a_finished_evaluation_cannot_be_finished_again(db_path, pending_id):
     with pytest.raises(ValueError, match="no longer pending"):
         finish_evaluation_state(failed, db_path)
     assert get_evaluation_state(pending_id, db_path).status == "completed"  # unchanged
+
+
+def test_cannot_finish_into_pending(db_path, pending_id):
+    with pytest.raises(ValueError):
+        finish_evaluation_state(EvaluationState(evaluation_id=pending_id), db_path)
