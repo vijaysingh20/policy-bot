@@ -1,6 +1,6 @@
 ---
 title: HR Policy Bot
-emoji: ðŸ“˜
+emoji: 📘
 colorFrom: indigo
 colorTo: blue
 sdk: docker
