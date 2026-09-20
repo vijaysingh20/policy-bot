@@ -1,4 +1,9 @@
+import os
 from pathlib import Path
+
+def csv_env(name: str, default: str) -> list[str]:
+    """Read a comma-separated environment variable into a clean list."""
+    return [item.strip().rstrip("/") for item in os.getenv(name, default).split(",") if item.strip()]
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 
@@ -14,6 +19,9 @@ EVALUATION_LOG = PROJECT_ROOT / "logs" / "evaluations.jsonl"
 
 UPLOAD_DIR = PROJECT_ROOT / "uploads"
 MAX_UPLOAD_BYTES = 10 * 1024 * 1024
+
+# Browsers may only call the API from these origins (set CORS_ORIGINS in production).
+CORS_ORIGINS = csv_env("CORS_ORIGINS", "http://localhost:3000,http://127.0.0.1:3000")
 
 EMBEDDING_MODEL = "sentence-transformers/all-MiniLM-L6-v2"
 RERANKER_MODEL = "cross-encoder/ms-marco-MiniLM-L6-v2"

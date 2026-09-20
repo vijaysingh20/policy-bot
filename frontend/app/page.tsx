@@ -2,6 +2,8 @@
 
 import { useState, useEffect } from "react";
 
+const API_URL = (process.env.NEXT_PUBLIC_API_URL ?? "http://127.0.0.1:8000").replace(/\/$/, "");
+
 type ContextSource = {
   source_id: string;
   chunk: {
@@ -82,7 +84,7 @@ export default function HomePage() {
 
       try {
         const response = await fetch(
-          `http://127.0.0.1:8000/evaluations/${evaluationId}`,
+          `${API_URL}/evaluations/${evaluationId}`,
           { signal: controller.signal }
         );
         if(!response.ok) {
@@ -151,7 +153,7 @@ export default function HomePage() {
       formData.append("file", selectedFile)
 
       const uploadResponse = await fetch(
-        "http://127.0.0.1:8000/documents",
+        `${API_URL}/documents`,
         {
           method: "POST",
           body: formData
@@ -174,7 +176,7 @@ export default function HomePage() {
       setDocumentPhase("indexing");
 
       const ingestResponse = await fetch(
-        `http://127.0.0.1:8000/documents/${uploaded.document_id}/ingest`,
+        `${API_URL}/documents/${uploaded.document_id}/ingest`,
         {
           method: "POST"
         }
@@ -220,7 +222,7 @@ export default function HomePage() {
     setIsLoading(true);
 
     try {
-      const response = await fetch("http://127.0.0.1:8000/questions", {
+      const response = await fetch(`${API_URL}/questions`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

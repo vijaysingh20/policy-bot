@@ -1,3 +1,6 @@
+import logging
+from functools import lru_cache
+
 from openai import AsyncOpenAI
 from ragas.embeddings import HuggingFaceEmbeddings
 from ragas.llms import llm_factory
@@ -20,6 +23,19 @@ from backend.schemas import (
     IndexManifest,
     RetrievalContext,
 )
+
+logger = logging.getLogger(__name__)
+
+
+@lru_cache(maxsize=2)
+def evaluator_embeddings(model_name: str, revision: str) -> HuggingFaceEmbeddings:
+    """Load the embedding model once per process, not once per evaluation."""
+    return HuggingFaceEmbeddings(
+        model=model_name,
+        revision=revision,
+        device=DEVICE,
+        normalize_embeddings=True,
+    )
 
 
 def build_evaluator_llm():
@@ -70,11 +86,9 @@ def evaluate_faithfulness(
 def answer_relevancy_scorer(
     manifest: IndexManifest
 ) -> AnswerRelevancy:
-    evaluator_embeddings = HuggingFaceEmbeddings(
-        model=manifest.embedding_model,
-        revision=manifest.embedding_revision,
-        device=DEVICE,
-        normalize_embeddings=True
+    return AnswerRelevancy(
+        llm=build_evaluator_llm(),
+        embeddings=evaluator_embeddings(manifest.embedding_model, manifest.embedding_revision),
     )
 
     return AnswerRelevancy(
@@ -111,8 +125,6 @@ def evaluate_context_precision(
         response = sample.response,
         retrieved_contexts = sample.retrieved_contexts
     )
-    print("\nRaw precision:", repr(result.value))
-    print("Reason:", result.reason)
-    print("Traces:", getattr(result, "traces", None))
+    logger.debug("Context precision %r: %s", result.value, result.reason)
 
     return float(result.value)
